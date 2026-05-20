@@ -1,6 +1,5 @@
 {
   "buildCommand": "npx vinxi build",
-  "outputDirectory": ".output/public",
   "installCommand": "npm install --legacy-peer-deps",
   "framework": null
 }
