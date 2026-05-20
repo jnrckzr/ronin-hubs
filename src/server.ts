@@ -1,28 +1,20 @@
 import "./lib/error-capture";
-
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
-import { z } from "zod";
-
-const EnvSchema = z.object({
-  SUPABASE_URL: z.string().url(),
-  SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-});
-
-export const env = EnvSchema.parse(process.env);
 
 type ServerEntry = {
-  fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
+  default: {
+    fetch: (request: Request) => Promise<Response> | Response;
+  };
 };
 
 let serverEntryPromise: Promise<ServerEntry> | undefined;
 
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
-    serverEntryPromise = import("@tanstack/react-start/server-entry").then(
-      (m) => (m as { default?: ServerEntry }).default ?? (m as unknown as ServerEntry),
-    );
+    serverEntryPromise = import(
+      "@tanstack/react-start/server-entry"
+    ) as Promise<ServerEntry>;
   }
   return serverEntryPromise;
 }
@@ -34,54 +26,13 @@ function brandedErrorResponse(): Response {
   });
 }
 
-function isCatastrophicSsrErrorBody(body: string, responseStatus: number): boolean {
-  let payload: unknown;
+export default async function handler(request: Request): Promise<Response> {
   try {
-    payload = JSON.parse(body);
-  } catch {
-    return false;
-  }
-
-  if (!payload || Array.isArray(payload) || typeof payload !== "object") {
-    return false;
-  }
-
-  const fields = payload as Record<string, unknown>;
-  const expectedKeys = new Set(["message", "status", "unhandled"]);
-  if (!Object.keys(fields).every((key) => expectedKeys.has(key))) {
-    return false;
-  }
-
-  return (
-    fields.unhandled === true &&
-    fields.message === "HTTPError" &&
-    (fields.status === undefined || fields.status === responseStatus)
-  );
-}
-
-async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
-  if (response.status < 500) return response;
-  const contentType = response.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/json")) return response;
-
-  const body = await response.clone().text();
-  if (!isCatastrophicSsrErrorBody(body, response.status)) {
+    const entry = await getServerEntry();
+    const response = await entry.default.fetch(request);
     return response;
+  } catch (error) {
+    console.error(consumeLastCapturedError() ?? error);
+    return brandedErrorResponse();
   }
-
-  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
-  return brandedErrorResponse();
 }
-
-export default {
-  async fetch(request: Request, env: unknown, ctx: unknown) {
-    try {
-      const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
-    } catch (error) {
-      console.error(error);
-      return brandedErrorResponse();
-    }
-  },
-};
