@@ -7,9 +7,10 @@ const content = readFileSync(file, "utf8");
 const srcPath = resolve(process.cwd(), "src");
 console.log("src path:", srcPath);
 
+// Replace the entire alias object entry with an array-style alias
 const patched = content.replace(
-  '"@": `${process.cwd()}/src`',
-  `"@": ${JSON.stringify(srcPath)}`
+  `"@": \`\${process.cwd()}/src\``,
+  `"@": ${JSON.stringify(srcPath + "/")}`
 );
 
 const wasPatched = patched !== content;
