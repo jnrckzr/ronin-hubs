@@ -549,7 +549,9 @@ export function Header() {
             </button>
           )}
 
-          {/* ── Hamburger — manual onClick, no SheetTrigger ── */}
+          {/* ── Hamburger ── */}
+          {/* NOTE: Sheet has been moved OUTSIDE rh-controls below to prevent
+              Radix overlay from intercepting pointer events on this button */}
           <button
             className="rh-hamburger"
             aria-label="Open navigation menu"
@@ -557,59 +559,62 @@ export function Header() {
           >
             <Menu size={20} />
           </button>
-
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetContent side="right" className="rh-sheet">
-              <SheetHeader className="rh-sheet-header">
-                <SheetTitle asChild>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <RoninLogo size={30} />
-                    <span className="rh-sheet-logo-name">{n}'s <span>Hub</span></span>
-                  </div>
-                </SheetTitle>
-              </SheetHeader>
-
-              <nav className="rh-sheet-nav">
-                <Link to="/" onClick={closeMobile} activeOptions={{ exact: true }} className="rh-sheet-link">Home</Link>
-                <Link to="/dashboard" onClick={closeMobile} className="rh-sheet-link">Dashboard</Link>
-                {isAdmin && (
-                  <>
-                    <div className="rh-sheet-section-label">Finances</div>
-                    <MobileGroup label="Sales"    items={SALES_ITEMS}    onNavigate={closeMobile} />
-                    <MobileGroup label="Expenses" items={EXPENSES_ITEMS} onNavigate={closeMobile} />
-                  </>
-                )}
-                <div className="rh-sheet-section-label">Businesses</div>
-                <MobileGroup label="Businesses" items={businessesItems} onNavigate={closeMobile} />
-              </nav>
-
-              <div className="rh-sheet-footer">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="rh-sheet-btn">{currency === "PHP" ? "₱ PHP" : "$ USD"}</button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="rh-dd-content">
-                    <DropdownMenuLabel className="rh-dd-label">Currency</DropdownMenuLabel>
-                    <DropdownMenuSeparator className="rh-dd-sep" />
-                    <DropdownMenuItem onClick={() => setCurrency("PHP")} className="rh-dd-item" style={{ flexDirection: "row", alignItems: "center" }}>₱ Philippine Peso</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setCurrency("USD")} className="rh-dd-item" style={{ flexDirection: "row", alignItems: "center" }}>$ US Dollar</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <button className="rh-sheet-icon-btn" onClick={toggle} aria-label="Toggle theme">
-                    {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
-                  </button>
-                  {user && (
-                    <button className="rh-sheet-btn danger" onClick={() => { closeMobile(); handleSignOut(); }}>
-                      <LogOut size={13} /> Sign out
-                    </button>
-                  )}
-                </div>
-              </div>
-            </SheetContent>
-          </Sheet>
         </div>
       </div>
+
+      {/* ── Mobile Sheet — lives outside rh-header-inner so its portal overlay
+          cannot compete with the hamburger button for pointer events ── */}
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent side="right" className="rh-sheet">
+          <SheetHeader className="rh-sheet-header">
+            <SheetTitle asChild>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <RoninLogo size={30} />
+                <span className="rh-sheet-logo-name">{n}'s <span>Hub</span></span>
+              </div>
+            </SheetTitle>
+          </SheetHeader>
+
+          <nav className="rh-sheet-nav">
+            <Link to="/" onClick={closeMobile} activeOptions={{ exact: true }} className="rh-sheet-link">Home</Link>
+            <Link to="/dashboard" onClick={closeMobile} className="rh-sheet-link">Dashboard</Link>
+            {isAdmin && (
+              <>
+                <div className="rh-sheet-section-label">Finances</div>
+                <MobileGroup label="Sales"    items={SALES_ITEMS}    onNavigate={closeMobile} />
+                <MobileGroup label="Expenses" items={EXPENSES_ITEMS} onNavigate={closeMobile} />
+              </>
+            )}
+            <div className="rh-sheet-section-label">Businesses</div>
+            <MobileGroup label="Businesses" items={businessesItems} onNavigate={closeMobile} />
+          </nav>
+
+          <div className="rh-sheet-footer">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="rh-sheet-btn">{currency === "PHP" ? "₱ PHP" : "$ USD"}</button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="rh-dd-content">
+                <DropdownMenuLabel className="rh-dd-label">Currency</DropdownMenuLabel>
+                <DropdownMenuSeparator className="rh-dd-sep" />
+                <DropdownMenuItem onClick={() => setCurrency("PHP")} className="rh-dd-item" style={{ flexDirection: "row", alignItems: "center" }}>₱ Philippine Peso</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setCurrency("USD")} className="rh-dd-item" style={{ flexDirection: "row", alignItems: "center" }}>$ US Dollar</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <button className="rh-sheet-icon-btn" onClick={toggle} aria-label="Toggle theme">
+                {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+              </button>
+              {user && (
+                <button className="rh-sheet-btn danger" onClick={() => { closeMobile(); handleSignOut(); }}>
+                  <LogOut size={13} /> Sign out
+                </button>
+              )}
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
+
     </header>
   );
 }
