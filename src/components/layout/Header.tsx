@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Moon, Sun, LogOut, Fish, Watch, Coins, ChevronDown, Menu } from "lucide-react";
+import { Moon, Sun, LogOut, Fish, Watch, Coins, ChevronDown, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth, useCurrency, useTheme } from "@/lib/providers";
 import { useRole } from "@/hooks/use-role";
@@ -13,7 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -131,18 +130,12 @@ const HEADER_STYLES = `
 
   .rh-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; transition: opacity .2s; }
   .rh-logo:hover { opacity: .85; }
-  .rh-logo-icon {
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    transition: transform .25s cubic-bezier(.34,1.56,.64,1);
-  }
+  .rh-logo-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform .25s cubic-bezier(.34,1.56,.64,1); }
   .rh-logo:hover .rh-logo-icon { transform: scale(1.08); }
   .rh-logo-name { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.025em; color: var(--text-primary); }
   .rh-logo-name span { color: var(--accent); }
 
-  .rh-nav-desktop {
-    display: none; position: absolute; left: 50%; transform: translateX(-50%);
-    align-items: center; gap: 2px;
-  }
+  .rh-nav-desktop { display: none; position: absolute; left: 50%; transform: translateX(-50%); align-items: center; gap: 2px; }
   @media (min-width: 768px) { .rh-nav-desktop { display: flex; } }
 
   .rh-navlink {
@@ -184,10 +177,7 @@ const HEADER_STYLES = `
     box-shadow: 0 8px 32px rgba(28,34,48,.18), 0 2px 8px rgba(110,142,247,.12) !important;
     padding: 6px !important; min-width: 260px; margin-top: 4px;
   }
-  .dark .rh-dd-content {
-    background: #1D2330 !important; border-color: #2C3445 !important;
-    box-shadow: 0 8px 32px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.25) !important;
-  }
+  .dark .rh-dd-content { background: #1D2330 !important; border-color: #2C3445 !important; box-shadow: 0 8px 32px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.25) !important; }
 
   @keyframes rh-shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 
@@ -199,30 +189,13 @@ const HEADER_STYLES = `
     transition: background .18s, border-color .18s, transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .18s !important;
   }
   .dark .rh-dd-item { color: #F4F1EA !important; }
-  .rh-dd-item:hover {
-    background: #D9DEE8 !important; border-color: #b8c2d8 !important;
-    transform: translateY(-1px) !important; box-shadow: 0 4px 12px rgba(110,142,247,.15) !important;
-  }
+  .rh-dd-item:hover { background: #D9DEE8 !important; border-color: #b8c2d8 !important; transform: translateY(-1px) !important; box-shadow: 0 4px 12px rgba(110,142,247,.15) !important; }
   .dark .rh-dd-item:hover { background: #252C3D !important; border-color: #2C3445 !important; box-shadow: 0 4px 12px rgba(0,0,0,.30) !important; }
-  .rh-dd-item::before {
-    content: ''; position: absolute; left: 0; top: 8px; bottom: 8px;
-    width: 2.5px; border-radius: 99px; background: var(--accent);
-    transform: scaleY(0); opacity: 0;
-    transition: transform .2s cubic-bezier(.34,1.56,.64,1), opacity .18s; transform-origin: center;
-  }
+  .rh-dd-item::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 2.5px; border-radius: 99px; background: var(--accent); transform: scaleY(0); opacity: 0; transition: transform .2s cubic-bezier(.34,1.56,.64,1), opacity .18s; transform-origin: center; }
   .rh-dd-item:hover::before { transform: scaleY(1); opacity: 1; }
-  .rh-dd-item::after {
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(110,142,247,.06), transparent);
-    transform: translateX(-100%); pointer-events: none;
-  }
+  .rh-dd-item::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(110,142,247,.06), transparent); transform: translateX(-100%); pointer-events: none; }
   .rh-dd-item:hover::after { animation: rh-shimmer .5s ease; }
-  .rh-dd-item-icon {
-    width: 32px; height: 32px; border-radius: var(--r-sm);
-    background: var(--accent-tint); color: var(--accent);
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
-    transition: background .2s, color .2s, transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .2s;
-  }
+  .rh-dd-item-icon { width: 32px; height: 32px; border-radius: var(--r-sm); background: var(--accent-tint); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; transition: background .2s, color .2s, transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .2s; }
   .rh-dd-item:hover .rh-dd-item-icon { background: var(--accent); color: #fff; transform: scale(1.12) rotate(-4deg); box-shadow: 0 4px 12px var(--accent-glow); }
   .rh-dd-item-label { font-size: 13px; font-weight: 700; color: #1C2230; transition: color .15s; }
   .dark .rh-dd-item-label { color: #F4F1EA; }
@@ -238,77 +211,71 @@ const HEADER_STYLES = `
   .dark .rh-dd-item[style] { color: #F4F1EA !important; }
 
   .rh-controls { display: flex; align-items: center; gap: 4px; margin-left: auto; }
-  .rh-icon-btn {
-    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
-    background: none; border: none; border-radius: var(--r-sm);
-    color: var(--text-secondary); cursor: pointer; font-family: inherit;
-    transition: background .15s, color .15s, transform .15s;
-  }
+  .rh-icon-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: none; border: none; border-radius: var(--r-sm); color: var(--text-secondary); cursor: pointer; font-family: inherit; transition: background .15s, color .15s, transform .15s; }
   .rh-icon-btn:hover { background: var(--bg-elevated); color: var(--text-primary); transform: scale(1.05); }
-  .rh-text-btn {
-    display: none; align-items: center; gap: 6px; padding: 0 12px; height: 34px;
-    background: none; border: 1.5px solid var(--border); border-radius: var(--r-sm);
-    font-size: 12px; font-weight: 700; font-family: inherit;
-    color: var(--text-secondary); cursor: pointer; white-space: nowrap;
-    transition: background .15s, border-color .15s, color .15s;
-  }
+  .rh-text-btn { display: none; align-items: center; gap: 6px; padding: 0 12px; height: 34px; background: none; border: 1.5px solid var(--border); border-radius: var(--r-sm); font-size: 12px; font-weight: 700; font-family: inherit; color: var(--text-secondary); cursor: pointer; white-space: nowrap; transition: background .15s, border-color .15s, color .15s; }
   @media (min-width: 640px) { .rh-text-btn { display: inline-flex; } }
   .rh-text-btn:hover { background: var(--bg-elevated); border-color: var(--border-strong); color: var(--text-primary); }
   .rh-text-btn.danger:hover { background: rgba(199,107,107,.08); border-color: var(--danger); color: var(--danger); }
 
-  .rh-hamburger {
-    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
-    background: none; border: none; border-radius: var(--r-sm);
-    color: var(--text-secondary); cursor: pointer; transition: background .15s, color .15s;
-    position: relative; z-index: 50;
-  }
+  .rh-hamburger { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: none; border: none; border-radius: var(--r-sm); color: var(--text-secondary); cursor: pointer; transition: background .15s, color .15s; }
   @media (min-width: 768px) { .rh-hamburger { display: none; } }
   .rh-hamburger:hover { background: var(--bg-elevated); color: var(--text-primary); }
 
-  [data-slot="sheet-content"].rh-sheet {
-    background-color: #FFFFFF !important; border-left: 1px solid #D9DEE8 !important;
-    padding: 0 !important; display: flex !important; flex-direction: column !important;
-    width: 300px !important; max-width: 85vw !important; overflow: hidden !important;
+  /* ── Plain CSS Mobile Drawer ── */
+  .rh-drawer-backdrop {
+    position: fixed; inset: 0; z-index: 9998;
+    background: rgba(15,17,23,0.75);
+    backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+    animation: rh-fade-in 0.2s ease forwards;
   }
-  .dark [data-slot="sheet-content"].rh-sheet { background-color: #1D2330 !important; border-left-color: #2C3445 !important; }
-  .rh-sheet-header {
-    display: flex !important; align-items: center !important; padding: 16px 18px !important;
-    background-color: #F4F6FB !important; border-bottom: 1px solid #D9DEE8 !important; flex-shrink: 0 !important;
+  @keyframes rh-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+  .rh-drawer-panel {
+    position: fixed; top: 0; right: 0; bottom: 0; z-index: 9999;
+    width: 300px; max-width: 85vw;
+    display: flex; flex-direction: column;
+    background: #FFFFFF;
+    border-left: 1px solid #D9DEE8;
+    box-shadow: -8px 0 48px rgba(0,0,0,0.18);
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    will-change: transform;
   }
-  .dark .rh-sheet-header { background-color: #252C3D !important; border-bottom-color: #2C3445 !important; }
+  .dark .rh-drawer-panel { background: #1D2330; border-left-color: #2C3445; box-shadow: -8px 0 48px rgba(0,0,0,0.55); }
+  .rh-drawer-panel.open { transform: translateX(0); }
+
+  .rh-sheet-header { display: flex; align-items: center; padding: 16px 18px; background-color: #F4F6FB; border-bottom: 1px solid #D9DEE8; flex-shrink: 0; gap: 10px; }
+  .dark .rh-sheet-header { background-color: #252C3D; border-bottom-color: #2C3445; }
   .rh-sheet-logo-name { font-size: 1rem; font-weight: 800; letter-spacing: -0.025em; color: #1C2230; }
   .dark .rh-sheet-logo-name { color: #F4F1EA; }
   .rh-sheet-logo-name span { color: #6E8EF7; }
   .dark .rh-sheet-logo-name span { color: #7DA2FF; }
+  .rh-drawer-close { margin-left: auto; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: none; border: 1px solid #D9DEE8; border-radius: 8px; color: #6C7380; cursor: pointer; transition: background .15s, color .15s; flex-shrink: 0; }
+  .dark .rh-drawer-close { border-color: #2C3445; color: #A2AAB8; }
+  .rh-drawer-close:hover { background: #EFE9DD; color: #1C2230; }
+  .dark .rh-drawer-close:hover { background: #161A22; color: #F4F1EA; }
+
   .rh-sheet-nav { flex: 1; overflow-y: auto; padding: 12px 10px; background-color: #FFFFFF; }
   .dark .rh-sheet-nav { background-color: #1D2330; }
   .rh-sheet-nav::-webkit-scrollbar { width: 3px; }
   .rh-sheet-nav::-webkit-scrollbar-track { background: transparent; }
   .rh-sheet-nav::-webkit-scrollbar-thumb { background: #D9DEE8; border-radius: 99px; }
   .dark .rh-sheet-nav::-webkit-scrollbar-thumb { background: #2C3445; }
-  .rh-sheet-section-label {
-    font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
-    color: #9AA1AE; padding: 14px 12px 6px; display: flex; align-items: center; gap: 8px;
-  }
+
+  .rh-sheet-section-label { font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #9AA1AE; padding: 14px 12px 6px; display: flex; align-items: center; gap: 8px; }
   .dark .rh-sheet-section-label { color: #6F7785; }
   .rh-sheet-section-label::after { content: ''; flex: 1; height: 1px; background: #D9DEE8; border-radius: 99px; }
   .dark .rh-sheet-section-label::after { background: #2C3445; }
-  .rh-sheet-link {
-    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
-    border-radius: 12px; font-size: 14px; font-weight: 600; color: #6C7380; text-decoration: none;
-    transition: background .15s, color .15s; margin-bottom: 2px;
-  }
+
+  .rh-sheet-link { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; font-size: 14px; font-weight: 600; color: #6C7380; text-decoration: none; transition: background .15s, color .15s; margin-bottom: 2px; }
   .dark .rh-sheet-link { color: #A2AAB8; }
   .rh-sheet-link:hover { background: #F4F6FB; color: #1C2230; }
   .dark .rh-sheet-link:hover { background: #252C3D; color: #F4F1EA; }
   .rh-sheet-link[data-status="active"] { background: rgba(110,142,247,0.10); color: #6E8EF7; font-weight: 700; }
   .dark .rh-sheet-link[data-status="active"] { background: rgba(125,162,255,0.12); color: #7DA2FF; }
-  .rh-sheet-group-trigger {
-    display: flex; width: 100%; align-items: center; justify-content: space-between;
-    padding: 10px 12px; border-radius: 12px; font-size: 14px; font-weight: 600;
-    color: #6C7380; background: none; border: none; cursor: pointer;
-    font-family: 'DM Sans', system-ui, sans-serif; transition: background .15s, color .15s; margin-bottom: 2px;
-  }
+
+  .rh-sheet-group-trigger { display: flex; width: 100%; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 12px; font-size: 14px; font-weight: 600; color: #6C7380; background: none; border: none; cursor: pointer; font-family: 'DM Sans', system-ui, sans-serif; transition: background .15s, color .15s; margin-bottom: 2px; }
   .dark .rh-sheet-group-trigger { color: #A2AAB8; }
   .rh-sheet-group-trigger:hover { background: #F4F6FB; color: #1C2230; }
   .dark .rh-sheet-group-trigger:hover { background: #252C3D; color: #F4F1EA; }
@@ -320,21 +287,14 @@ const HEADER_STYLES = `
   .dark .rh-sheet-group-trigger:hover .rh-sheet-group-chevron { color: #F4F1EA; }
   .rh-sheet-group-chevron.open { transform: rotate(180deg); }
   .rh-sheet-sub-list { padding: 4px 0 4px 8px; }
-  .rh-sheet-sublink {
-    display: flex; align-items: center; gap: 10px; padding: 9px 12px;
-    border-radius: 10px; font-size: 13.5px; font-weight: 600; color: #6C7380; text-decoration: none;
-    transition: background .15s, color .15s; margin-bottom: 2px;
-  }
+
+  .rh-sheet-sublink { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; font-size: 13.5px; font-weight: 600; color: #6C7380; text-decoration: none; transition: background .15s, color .15s; margin-bottom: 2px; }
   .dark .rh-sheet-sublink { color: #A2AAB8; }
   .rh-sheet-sublink:hover { background: #F4F6FB; color: #1C2230; }
   .dark .rh-sheet-sublink:hover { background: #252C3D; color: #F4F1EA; }
   .rh-sheet-sublink[data-status="active"] { background: rgba(110,142,247,0.10); color: #6E8EF7; }
   .dark .rh-sheet-sublink[data-status="active"] { background: rgba(125,162,255,0.12); color: #7DA2FF; }
-  .rh-sheet-sublink-icon {
-    width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
-    background: rgba(110,142,247,0.10); color: #6E8EF7;
-    display: flex; align-items: center; justify-content: center; transition: background .18px, color .18s;
-  }
+  .rh-sheet-sublink-icon { width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0; background: rgba(110,142,247,0.10); color: #6E8EF7; display: flex; align-items: center; justify-content: center; transition: background .18s, color .18s; }
   .dark .rh-sheet-sublink-icon { background: rgba(125,162,255,0.12); color: #7DA2FF; }
   .rh-sheet-sublink:hover .rh-sheet-sublink-icon { background: #6E8EF7; color: #fff; }
   .dark .rh-sheet-sublink:hover .rh-sheet-sublink-icon { background: #7DA2FF; color: #fff; }
@@ -343,28 +303,16 @@ const HEADER_STYLES = `
   .dark .rh-sheet-sublink-label { color: #F4F1EA; }
   .rh-sheet-sublink-desc { font-size: 11px; color: #9AA1AE; margin-top: 1px; line-height: 1.25; }
   .dark .rh-sheet-sublink-desc { color: #6F7785; }
-  .rh-sheet-footer {
-    border-top: 1px solid #D9DEE8; background-color: #F4F6FB;
-    padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0;
-  }
+
+  .rh-sheet-footer { border-top: 1px solid #D9DEE8; background-color: #F4F6FB; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0; }
   .dark .rh-sheet-footer { border-top-color: #2C3445; background-color: #252C3D; }
-  .rh-sheet-btn {
-    display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; height: 34px;
-    background: #FFFFFF; border: 1.5px solid #D9DEE8; border-radius: 10px;
-    font-size: 12px; font-weight: 700; font-family: 'DM Sans', system-ui, sans-serif;
-    color: #6C7380; cursor: pointer; white-space: nowrap;
-    transition: background .15s, border-color .15s, color .15s;
-  }
+  .rh-sheet-btn { display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; height: 34px; background: #FFFFFF; border: 1.5px solid #D9DEE8; border-radius: 10px; font-size: 12px; font-weight: 700; font-family: 'DM Sans', system-ui, sans-serif; color: #6C7380; cursor: pointer; white-space: nowrap; transition: background .15s, border-color .15s, color .15s; }
   .dark .rh-sheet-btn { background: #1D2330; border-color: #2C3445; color: #A2AAB8; }
   .rh-sheet-btn:hover { background: #EFE9DD; border-color: #b8c2d8; color: #1C2230; }
   .dark .rh-sheet-btn:hover { background: #161A22; border-color: #3d4a60; color: #F4F1EA; }
   .rh-sheet-btn.danger:hover { background: rgba(199,107,107,.08); border-color: #C76B6B; color: #C76B6B; }
   .dark .rh-sheet-btn.danger:hover { background: rgba(214,124,124,.08); border-color: #D67C7C; color: #D67C7C; }
-  .rh-sheet-icon-btn {
-    width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
-    background: #FFFFFF; border: 1.5px solid #D9DEE8; border-radius: 10px;
-    color: #6C7380; cursor: pointer; transition: background .15s, color .15s, border-color .15s;
-  }
+  .rh-sheet-icon-btn { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1.5px solid #D9DEE8; border-radius: 10px; color: #6C7380; cursor: pointer; transition: background .15s, color .15s, border-color .15s; }
   .dark .rh-sheet-icon-btn { background: #1D2330; border-color: #2C3445; color: #A2AAB8; }
   .rh-sheet-icon-btn:hover { background: #EFE9DD; border-color: #b8c2d8; color: #1C2230; }
   .dark .rh-sheet-icon-btn:hover { background: #161A22; border-color: #3d4a60; color: #F4F1EA; }
@@ -386,7 +334,6 @@ function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
 function DDMenu({ label, items }: { label: string; items: NavItem[] }) {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const active = items.some((i) => path.startsWith(i.to));
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -415,11 +362,18 @@ function DDMenu({ label, items }: { label: string; items: NavItem[] }) {
 
 // ─── Mobile Collapsible Group ─────────────────────────────────────────────────
 
-function MobileGroup({ label, items, onNavigate }: { label: string; items: NavItem[]; onNavigate: () => void }) {
+function MobileGroup({
+  label,
+  items,
+  onNavigate,
+}: {
+  label: string;
+  items: NavItem[];
+  onNavigate: () => void;
+}) {
   const path = useRouterState({ select: (r) => r.location.pathname });
   const active = items.some((i) => path.startsWith(i.to));
   const [open, setOpen] = useState(active);
-
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger asChild>
@@ -471,8 +425,8 @@ export function Header() {
   const n = profile?.display_name ?? "Ronin";
 
   const SALES_ITEMS: NavItem[] = [
-    { to: "/sales/aquatic",    label: `${n}'s Aquatic`,    desc: "Fish sales tracker",   icon: <Fish className="h-4 w-4" /> },
-    { to: "/sales/timepieces", label: `${n}'s Timepieces`, desc: "Watch sales tracker",  icon: <Watch className="h-4 w-4" /> },
+    { to: "/sales/aquatic",    label: `${n}'s Aquatic`,    desc: "Fish sales tracker",  icon: <Fish className="h-4 w-4" /> },
+    { to: "/sales/timepieces", label: `${n}'s Timepieces`, desc: "Watch sales tracker", icon: <Watch className="h-4 w-4" /> },
   ];
   const EXPENSES_ITEMS: NavItem[] = [
     { to: "/expenses/aquatic",    label: `${n}'s Aquatic`,    desc: "Aquarium expenses",   icon: <Fish className="h-4 w-4" /> },
@@ -495,6 +449,12 @@ export function Header() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileOpen]);
+
   const handleSignOut = async () => {
     await signOut();
     navigate({ to: "/login" });
@@ -503,35 +463,119 @@ export function Header() {
   const closeMobile = () => setMobileOpen(false);
 
   return (
-    <header className={`rh-header${scrolled ? " scrolled" : ""}`}>
+    <>
       <style>{HEADER_STYLES}</style>
 
-      <div className="rh-header-inner">
+      {/* ── Sticky Header ── */}
+      <header className={`rh-header${scrolled ? " scrolled" : ""}`}>
+        <div className="rh-header-inner">
 
-        {/* ── Logo ── */}
-        <Link to="/" className="rh-logo">
-          <div className="rh-logo-icon">
-            <RoninLogo size={34} />
+          {/* Logo */}
+          <Link to="/" className="rh-logo">
+            <div className="rh-logo-icon"><RoninLogo size={34} /></div>
+            <span className="rh-logo-name">{n}'s <span>Hub</span></span>
+          </Link>
+
+          {/* Desktop Nav */}
+          <nav className="rh-nav-desktop">
+            <NavLink to="/">Home</NavLink>
+            <NavLink to="/dashboard">Dashboard</NavLink>
+            {isAdmin && <DDMenu label="Sales"    items={SALES_ITEMS} />}
+            {isAdmin && <DDMenu label="Expenses" items={EXPENSES_ITEMS} />}
+            <DDMenu label="Businesses" items={businessesItems} />
+          </nav>
+
+          {/* Right Controls */}
+          <div className="rh-controls">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="rh-text-btn">{currency === "PHP" ? "₱ PHP" : "$ USD"}</button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="rh-dd-content">
+                <DropdownMenuLabel className="rh-dd-label">Currency</DropdownMenuLabel>
+                <DropdownMenuSeparator className="rh-dd-sep" />
+                <DropdownMenuItem onClick={() => setCurrency("PHP")} className="rh-dd-item" style={{ flexDirection: "row", alignItems: "center" }}>₱ Philippine Peso</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setCurrency("USD")} className="rh-dd-item" style={{ flexDirection: "row", alignItems: "center" }}>$ US Dollar</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <button className="rh-icon-btn" onClick={toggle} aria-label="Toggle theme">
+              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+
+            {user && (
+              <button className="rh-text-btn danger" onClick={handleSignOut}>
+                <LogOut size={14} /> Sign out
+              </button>
+            )}
+
+            <button
+              className="rh-hamburger"
+              aria-label="Open navigation menu"
+              onClick={() => setMobileOpen(true)}
+            >
+              <Menu size={20} />
+            </button>
           </div>
-          <span className="rh-logo-name">{n}'s <span>Hub</span></span>
-        </Link>
+        </div>
+      </header>
 
-        {/* ── Desktop Nav ── */}
-        <nav className="rh-nav-desktop">
-          <NavLink to="/">Home</NavLink>
-          <NavLink to="/dashboard">Dashboard</NavLink>
-          {isAdmin && <DDMenu label="Sales"    items={SALES_ITEMS} />}
-          {isAdmin && <DDMenu label="Expenses" items={EXPENSES_ITEMS} />}
-          <DDMenu label="Businesses" items={businessesItems} />
+      {/* ── Mobile Drawer ─────────────────────────────────────────────────────
+          Pure CSS/React — no Radix Sheet, no animation plugins.
+          Backdrop is conditionally rendered; panel always in DOM but
+          slides off-screen via transform: translateX(100%) when closed.
+      ──────────────────────────────────────────────────────────────────────── */}
+      {mobileOpen && (
+        <div
+          className="rh-drawer-backdrop"
+          onClick={closeMobile}
+          aria-hidden="true"
+        />
+      )}
+
+      <div
+        className={`rh-drawer-panel${mobileOpen ? " open" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation menu"
+      >
+        {/* Panel Header */}
+        <div className="rh-sheet-header">
+          <RoninLogo size={30} />
+          <span className="rh-sheet-logo-name">{n}'s <span>Hub</span></span>
+          <button className="rh-drawer-close" onClick={closeMobile} aria-label="Close menu">
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Nav Links */}
+        <nav className="rh-sheet-nav">
+          <Link to="/" onClick={closeMobile} activeOptions={{ exact: true }} className="rh-sheet-link">
+            Home
+          </Link>
+          <Link to="/dashboard" onClick={closeMobile} className="rh-sheet-link">
+            Dashboard
+          </Link>
+
+          {isAdmin && (
+            <>
+              <div className="rh-sheet-section-label">Finances</div>
+              <MobileGroup label="Sales"    items={SALES_ITEMS}    onNavigate={closeMobile} />
+              <MobileGroup label="Expenses" items={EXPENSES_ITEMS} onNavigate={closeMobile} />
+            </>
+          )}
+
+          <div className="rh-sheet-section-label">Businesses</div>
+          <MobileGroup label="Businesses" items={businessesItems} onNavigate={closeMobile} />
         </nav>
 
-        {/* ── Right Controls ── */}
-        <div className="rh-controls">
+        {/* Panel Footer */}
+        <div className="rh-sheet-footer">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="rh-text-btn">{currency === "PHP" ? "₱ PHP" : "$ USD"}</button>
+              <button className="rh-sheet-btn">{currency === "PHP" ? "₱ PHP" : "$ USD"}</button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="rh-dd-content">
+            <DropdownMenuContent align="start" className="rh-dd-content">
               <DropdownMenuLabel className="rh-dd-label">Currency</DropdownMenuLabel>
               <DropdownMenuSeparator className="rh-dd-sep" />
               <DropdownMenuItem onClick={() => setCurrency("PHP")} className="rh-dd-item" style={{ flexDirection: "row", alignItems: "center" }}>₱ Philippine Peso</DropdownMenuItem>
@@ -539,82 +583,21 @@ export function Header() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <button className="rh-icon-btn" onClick={toggle} aria-label="Toggle theme">
-            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-
-          {user && (
-            <button className="rh-text-btn danger" onClick={handleSignOut}>
-              <LogOut size={14} /> Sign out
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button className="rh-sheet-icon-btn" onClick={toggle} aria-label="Toggle theme">
+              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
             </button>
-          )}
-
-          {/* ── Hamburger ── */}
-          {/* NOTE: Sheet has been moved OUTSIDE rh-controls below to prevent
-              Radix overlay from intercepting pointer events on this button */}
-          <button
-            className="rh-hamburger"
-            aria-label="Open navigation menu"
-            onClick={() => setMobileOpen(true)}
-          >
-            <Menu size={20} />
-          </button>
+            {user && (
+              <button
+                className="rh-sheet-btn danger"
+                onClick={() => { closeMobile(); handleSignOut(); }}
+              >
+                <LogOut size={13} /> Sign out
+              </button>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* ── Mobile Sheet — lives outside rh-header-inner so its portal overlay
-          cannot compete with the hamburger button for pointer events ── */}
-      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="right" className="rh-sheet">
-          <SheetHeader className="rh-sheet-header">
-            <SheetTitle asChild>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <RoninLogo size={30} />
-                <span className="rh-sheet-logo-name">{n}'s <span>Hub</span></span>
-              </div>
-            </SheetTitle>
-          </SheetHeader>
-
-          <nav className="rh-sheet-nav">
-            <Link to="/" onClick={closeMobile} activeOptions={{ exact: true }} className="rh-sheet-link">Home</Link>
-            <Link to="/dashboard" onClick={closeMobile} className="rh-sheet-link">Dashboard</Link>
-            {isAdmin && (
-              <>
-                <div className="rh-sheet-section-label">Finances</div>
-                <MobileGroup label="Sales"    items={SALES_ITEMS}    onNavigate={closeMobile} />
-                <MobileGroup label="Expenses" items={EXPENSES_ITEMS} onNavigate={closeMobile} />
-              </>
-            )}
-            <div className="rh-sheet-section-label">Businesses</div>
-            <MobileGroup label="Businesses" items={businessesItems} onNavigate={closeMobile} />
-          </nav>
-
-          <div className="rh-sheet-footer">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="rh-sheet-btn">{currency === "PHP" ? "₱ PHP" : "$ USD"}</button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="rh-dd-content">
-                <DropdownMenuLabel className="rh-dd-label">Currency</DropdownMenuLabel>
-                <DropdownMenuSeparator className="rh-dd-sep" />
-                <DropdownMenuItem onClick={() => setCurrency("PHP")} className="rh-dd-item" style={{ flexDirection: "row", alignItems: "center" }}>₱ Philippine Peso</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setCurrency("USD")} className="rh-dd-item" style={{ flexDirection: "row", alignItems: "center" }}>$ US Dollar</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <button className="rh-sheet-icon-btn" onClick={toggle} aria-label="Toggle theme">
-                {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
-              </button>
-              {user && (
-                <button className="rh-sheet-btn danger" onClick={() => { closeMobile(); handleSignOut(); }}>
-                  <LogOut size={13} /> Sign out
-                </button>
-              )}
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
-
-    </header>
+    </>
   );
 }
