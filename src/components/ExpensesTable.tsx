@@ -6,11 +6,8 @@ import { toast } from "sonner";
 import {
   Trash2,
   Receipt,
-  TrendingDown,
-  CalendarDays,
   FileText,
   Plus,
-  Sparkles,
 } from "lucide-react";
 
 export function ExpensesTable({
@@ -43,8 +40,9 @@ export function ExpensesTable({
   const [isAdding, setIsAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const submit = async () => {
-    if (!type || !amount || !user) return toast.error("Fill required fields");
+  // ── Fixed: explicit Promise<void> return type ────────────────────────────
+  const submit = async (): Promise<void> => {
+    if (!type || !amount || !user) { toast.error("Fill required fields"); return; }
     setIsAdding(true);
     const { error } = await supabase.from(table).insert({
       user_id: user.id,
@@ -54,7 +52,7 @@ export function ExpensesTable({
       notes: notes || null,
     });
     setIsAdding(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setType("");
     setAmount("");
     setNotes("");
@@ -62,15 +60,15 @@ export function ExpensesTable({
     qc.invalidateQueries({ queryKey: [table] });
   };
 
-  const remove = async (id: string) => {
+  const remove = async (id: string): Promise<void> => {
     setDeletingId(id);
     await supabase.from(table).delete().eq("id", id);
     qc.invalidateQueries({ queryKey: [table] });
     setDeletingId(null);
   };
 
-  const total = (rows ?? []).reduce((s, r: any) => s + Number(r.amount), 0);
-  const count = (rows ?? []).length;
+  const total   = (rows ?? []).reduce((s, r: any) => s + Number(r.amount), 0);
+  const count   = (rows ?? []).length;
   const average = count > 0 ? total / count : 0;
 
   return (

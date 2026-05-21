@@ -7,28 +7,6 @@ import { useAuth } from "@/lib/providers";
 import { FISH_TYPES } from "@/lib/constants";
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import { useEffect } from 'react'
-import { useNavigate } from '@tanstack/react-router'
-import { useRole } from '@/hooks/use-role'
-
-export default function AquaticPage() {
-  const { isLimited, loading } = useRole()
-  const navigate = useNavigate()
-
-  useEffect(() => {
-    if (!loading && isLimited) {
-      navigate({ to: '/dashboard' })
-    }
-  }, [isLimited, loading])
-
-  if (loading) return null
-
-  return (
-    <div>
-      {/* your existing content */}
-    </div>
-  )
-}
 
 export const Route = createFileRoute("/businesses/aquatic")({
   head: () => ({ meta: [{ title: "Aquatic Inventory — Ronin's Hub" }] }),
@@ -44,7 +22,7 @@ interface InventoryRow {
   id: string;
   fish_type: string;
   stock_in: number;
-  stock_out: number; // derived from aquatic_sales sum
+  stock_out: number;
   created_at: string;
   updated_at: string;
 }
@@ -152,7 +130,6 @@ function InventoryCard({
         </button>
       </div>
 
-      {/* Available stock — big display */}
       <div className="current-stock-display">
         <span className="current-num" style={{ color: current <= 0 ? "#C76B6B" : current <= 5 ? "#C9995D" : "var(--c-accent)" }}>
           {current}
@@ -160,7 +137,6 @@ function InventoryCard({
         <span className="current-label">available</span>
       </div>
 
-      {/* Stock in / out summary */}
       <div className="stock-summary">
         <div className="summary-item">
           <span className="summary-label">Total Stocked</span>
@@ -173,7 +149,6 @@ function InventoryCard({
         </div>
       </div>
 
-      {/* Action buttons — Restock only; selling is done via Sales page */}
       <div className="card-actions">
         <button
           className="restock-btn"
@@ -212,7 +187,6 @@ function AquaticInventoryPage() {
     queryKey: ["aquatic-inv", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      // Fetch inventory and sales in parallel
       const [invRes, salesRes] = await Promise.all([
         supabase
           .from("aquatic_inventory")
@@ -225,13 +199,11 @@ function AquaticInventoryPage() {
           .eq("user_id", user!.id),
       ]);
 
-      // Sum sold quantities per fish type from actual sales records
       const soldMap: Record<string, number> = {};
       for (const s of salesRes.data ?? []) {
         soldMap[s.fish_type] = (soldMap[s.fish_type] ?? 0) + Number(s.quantity);
       }
 
-      // Override stock_out with the real sales-derived total
       return (invRes.data ?? []).map((row) => ({
         ...row,
         stock_out: soldMap[row.fish_type] ?? 0,
@@ -239,16 +211,15 @@ function AquaticInventoryPage() {
     },
   });
 
-  // Invalidate both queries so inventory always reflects latest sales
   const invalidate = useCallback(() => {
     qc.invalidateQueries({ queryKey: ["aquatic-inv"] });
     qc.invalidateQueries({ queryKey: ["aquatic-sales"] });
   }, [qc]);
 
-  /* ── Add new fish ── */
-  const addNew = async () => {
-    if (!fishType) return toast.error("Please select a fish type");
-    if (!user) return toast.error("Not authenticated");
+  // ── Fixed: explicit Promise<void> return type ──────────────────────────
+  const addNew = async (): Promise<void> => {
+    if (!fishType) { toast.error("Please select a fish type"); return; }
+    if (!user)     { toast.error("Not authenticated"); return; }
     setAdding(true);
     const initialStock = Math.max(0, parseInt(stockIn, 10) || 0);
     const { error } = await supabase.from("aquatic_inventory").insert({
@@ -258,15 +229,15 @@ function AquaticInventoryPage() {
       stock_out: 0,
     });
     setAdding(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setFishType("");
     setStockIn("0");
     invalidate();
     toast.success(`${fishType} added — ${initialStock} fish stocked`);
   };
 
-  /* ── Restock: increase stock_in only ── */
-  const confirmRestock = async (qty: number) => {
+  // ── Fixed: explicit Promise<void> return type ──────────────────────────
+  const confirmRestock = async (qty: number): Promise<void> => {
     if (!restockTarget) return;
     const { id, stock_in, fish_type } = restockTarget;
     setBusyRows((s) => new Set(s).add(id));
@@ -275,20 +246,20 @@ function AquaticInventoryPage() {
       .update({ stock_in: stock_in + qty, updated_at: new Date().toISOString() })
       .eq("id", id);
     setBusyRows((s) => { const n = new Set(s); n.delete(id); return n; });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setRestockTarget(null);
     invalidate();
     toast.success(`Restocked ${qty} × ${fish_type} — new total: ${stock_in + qty}`);
   };
 
-  /* ── Remove ── */
-  const remove = async (id: string) => {
+  // ── Fixed: explicit Promise<void> return type ──────────────────────────
+  const remove = async (id: string): Promise<void> => {
     const row = rows.find((r) => r.id === id);
     if (!row) return;
     setBusyRows((s) => new Set(s).add(id));
     const { error } = await supabase.from("aquatic_inventory").delete().eq("id", id);
     setBusyRows((s) => { const n = new Set(s); n.delete(id); return n; });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     invalidate();
     toast.success(`${row.fish_type} removed`);
   };
@@ -298,15 +269,11 @@ function AquaticInventoryPage() {
   const totalAvail = totalFish - totalSold;
   const lowStock   = rows.filter((r) => r.stock_in - r.stock_out <= 5).length;
 
-  /* ── Row used in modal (always fresh from query data) ── */
   const restockRow = restockTarget ? rows.find((r) => r.id === restockTarget.id) ?? restockTarget : null;
 
   return (
     <div className="aq2-root">
-
-      {/* ── Styles ─────────────────────────────────────────────────────── */}
       <style>{`
-        /* ── Tokens — Cinematic Anime Palette ── */
         .aq2-root {
           --c-bg:          #F7F4EE;
           --c-bg2:         #EFE9DD;
@@ -351,10 +318,8 @@ function AquaticInventoryPage() {
           --c-shadow-sm:   0 1px 3px rgba(0,0,0,.30), 0 4px 16px rgba(0,0,0,.20);
           --c-shadow-md:   0 2px 8px rgba(0,0,0,.35), 0 8px 32px rgba(0,0,0,.25);
         }
-
         .aq2-root * { box-sizing: border-box; }
         .aq2-root { padding: clamp(12px,3vw,28px); min-height: 100vh; }
-
         @keyframes fadeUp  { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
         @keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
         @keyframes shimmer { from { transform:translateX(-100%); } to { transform:translateX(100%); } }
@@ -362,20 +327,12 @@ function AquaticInventoryPage() {
         @keyframes sk      { from { background-position:-200% 0; } to { background-position:200% 0; } }
         @keyframes modalIn { from { opacity:0; transform:scale(.94) translateY(12px); } to { opacity:1; transform:scale(1) translateY(0); } }
         .fade-up { animation: fadeUp .38s cubic-bezier(.22,.68,0,1.2) both; }
-
-        /* ── Page Header ── */
         .page-header { margin-bottom: 24px; }
         .page-title { font-size: clamp(1.6rem,4.5vw,2.6rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; color: var(--c-text); margin: 0 0 4px; }
         .page-title span { color: var(--c-accent); }
         .page-sub { font-size: clamp(0.8rem,2vw,0.95rem); color: var(--c-text2); margin: 0; }
-
-        /* ── Stat strip ── */
         .stat-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap: 10px; margin-bottom: 20px; }
-        .stat-card {
-          background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--r-md);
-          padding: 14px 16px; box-shadow: var(--c-shadow-sm); position: relative; overflow: hidden;
-          transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
-        }
+        .stat-card { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--r-md); padding: 14px 16px; box-shadow: var(--c-shadow-sm); position: relative; overflow: hidden; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
         .stat-card:hover { transform: translateY(-2px); box-shadow: var(--c-shadow-md); border-color: var(--c-border-md); }
         .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--c-accent); border-radius:99px 99px 0 0; }
         .stat-card.accent2::before { background: var(--c-accent2); }
@@ -383,56 +340,24 @@ function AquaticInventoryPage() {
         .stat-card.warn::before    { background: var(--c-warn); }
         .stat-label { font-size:.68rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--c-text3); display:block; margin-bottom:6px; }
         .stat-value { font-size:clamp(1.4rem,3vw,2rem); font-weight:800; color:var(--c-text); letter-spacing:-0.02em; line-height:1; }
-
-        /* ── Form card ── */
-        .form-card {
-          background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--r-xl);
-          padding: clamp(16px,3vw,24px); box-shadow: var(--c-shadow-sm); margin-bottom: 20px;
-          transition: border-color .25s, box-shadow .25s;
-        }
+        .form-card { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--r-xl); padding: clamp(16px,3vw,24px); box-shadow: var(--c-shadow-sm); margin-bottom: 20px; transition: border-color .25s, box-shadow .25s; }
         .form-card:focus-within { border-color: var(--c-border-md); box-shadow: var(--c-shadow-md); }
         .form-heading { font-size:.82rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--c-text3); margin:0 0 16px; }
         .form-grid { display:grid; grid-template-columns:1fr; gap:12px; }
         @media (min-width: 480px) { .form-grid { grid-template-columns: 2fr 1fr auto; align-items: end; } }
         .form-label { font-size:.72rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--c-text2); display:block; margin-bottom:6px; }
-        .form-input {
-          width:100%; height:42px; padding:0 12px;
-          background:var(--c-elevated); border:1.5px solid var(--c-border);
-          border-radius:var(--r-sm); color:var(--c-text); font-size:14px; font-family:inherit;
-          outline:none; transition:border-color .18s, box-shadow .18s;
-        }
+        .form-input { width:100%; height:42px; padding:0 12px; background:var(--c-elevated); border:1.5px solid var(--c-border); border-radius:var(--r-sm); color:var(--c-text); font-size:14px; font-family:inherit; outline:none; transition:border-color .18s, box-shadow .18s; }
         .form-input:hover { border-color: var(--c-border-md); }
         .form-input:focus { border-color: var(--c-accent); box-shadow: 0 0 0 3px var(--c-accent-lt); }
-
-        /* ── Add button ── */
-        .add-btn {
-          position:relative; overflow:hidden;
-          display:flex; align-items:center; justify-content:center; gap:6px;
-          height:42px; padding:0 20px;
-          background:var(--c-accent); color:#fff; border:none;
-          border-radius:var(--r-sm); font-size:14px; font-weight:700; font-family:inherit;
-          cursor:pointer; white-space:nowrap;
-          transition:background .18s, transform .14s, box-shadow .18s;
-          width:100%;
-        }
+        .add-btn { position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; gap:6px; height:42px; padding:0 20px; background:var(--c-accent); color:#fff; border:none; border-radius:var(--r-sm); font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; white-space:nowrap; transition:background .18s, transform .14s, box-shadow .18s; width:100%; }
         @media (min-width: 480px) { .add-btn { width: auto; } }
         .add-btn:hover:not(:disabled) { background:var(--c-hover); box-shadow:0 4px 20px var(--c-accent-glow); transform:translateY(-1px); }
         .add-btn:active:not(:disabled) { transform:scale(.97); box-shadow:none; }
         .add-btn:disabled { opacity:.6; cursor:not-allowed; }
         .add-btn::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent); transform:translateX(-100%); pointer-events:none; }
         .add-btn:hover:not(:disabled)::after { animation:shimmer .55s ease; }
-
-        /* ── Card list ── */
         .card-list { display:flex; flex-direction:column; gap:12px; }
-
-        /* ── Inventory card ── */
-        .inv-card {
-          background:var(--c-surface); border:1px solid var(--c-border); border-radius:var(--r-lg);
-          padding:clamp(14px,3vw,20px); box-shadow:var(--c-shadow-sm);
-          position:relative; overflow:hidden;
-          animation:fadeUp .35s cubic-bezier(.22,.68,0,1.2) both;
-          transition:border-color .22s, box-shadow .22s, transform .22s;
-        }
+        .inv-card { background:var(--c-surface); border:1px solid var(--c-border); border-radius:var(--r-lg); padding:clamp(14px,3vw,20px); box-shadow:var(--c-shadow-sm); position:relative; overflow:hidden; animation:fadeUp .35s cubic-bezier(.22,.68,0,1.2) both; transition:border-color .22s, box-shadow .22s, transform .22s; }
         .inv-card:hover { border-color:var(--c-border-md); box-shadow:var(--c-shadow-md); transform:translateY(-2px); }
         .inv-card-header { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
         .fish-icon-wrap { width:38px; height:38px; border-radius:var(--r-sm); background:var(--c-accent-lt); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .2s, transform .2s; }
@@ -440,8 +365,6 @@ function AquaticInventoryPage() {
         .fish-svg { width:20px; height:20px; color:var(--c-accent); }
         .fish-info { flex:1; min-width:0; }
         .fish-name { display:block; font-size:15px; font-weight:700; color:var(--c-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-        /* ── Status pill ── */
         .status-pill { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; letter-spacing:.05em; padding:3px 8px; border-radius:99px; margin-top:3px; }
         .status-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
         .status-empty { background:rgba(199,107,107,.12); color:#C76B6B; }
@@ -452,18 +375,12 @@ function AquaticInventoryPage() {
         .dark .status-low   { color:#D6A86A; background:rgba(214,168,106,.12); }
         .dark .status-ok    { color:#89B89A; background:rgba(137,184,154,.12); }
         .dark .status-great { color:#7DA2FF; background:rgba(125,162,255,.12); }
-
-        /* ── Remove button ── */
         .remove-btn { width:34px; height:34px; display:flex; align-items:center; justify-content:center; background:none; border:none; border-radius:var(--r-sm); color:var(--c-text3); cursor:pointer; flex-shrink:0; transition:background .15s, color .15s, transform .12s; }
         .remove-btn:hover:not(:disabled) { background:rgba(199,107,107,.1); color:var(--c-danger); transform:scale(1.1); }
         .remove-btn:disabled { opacity:.4; cursor:not-allowed; }
-
-        /* ── Available display ── */
         .current-stock-display { display:flex; align-items:baseline; gap:6px; background:var(--c-elevated); border:1px solid var(--c-border); border-radius:var(--r-sm); padding:10px 14px; margin-bottom:12px; }
         .current-num { font-size:2rem; font-weight:800; letter-spacing:-0.03em; line-height:1; transition:color .2s; }
         .current-label { font-size:13px; color:var(--c-text2); }
-
-        /* ── Stock in/out summary row ── */
         .stock-summary { display:flex; align-items:center; background:var(--c-elevated); border:1px solid var(--c-border); border-radius:var(--r-sm); overflow:hidden; margin-bottom:12px; }
         .summary-item { flex:1; display:flex; flex-direction:column; align-items:center; padding:10px 8px; gap:4px; }
         .summary-label { font-size:.63rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--c-text3); }
@@ -471,37 +388,16 @@ function AquaticInventoryPage() {
         .summary-val.in  { color:var(--c-ok); }
         .summary-val.out { color:var(--c-warn); }
         .summary-divider { width:1px; align-self:stretch; background:var(--c-border); flex-shrink:0; }
-
-        /* ── Card action buttons ── */
         .card-actions { display:flex; align-items:center; gap:10px; }
-        .restock-btn {
-          flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
-          height:38px; background:var(--c-accent-lt); border:1.5px solid var(--c-accent);
-          border-radius:var(--r-sm); color:var(--c-accent); font-size:13px; font-weight:700; font-family:inherit;
-          cursor:pointer; transition:background .15s, transform .12s, box-shadow .15s;
-        }
+        .restock-btn { flex:1; display:flex; align-items:center; justify-content:center; gap:6px; height:38px; background:var(--c-accent-lt); border:1.5px solid var(--c-accent); border-radius:var(--r-sm); color:var(--c-accent); font-size:13px; font-weight:700; font-family:inherit; cursor:pointer; transition:background .15s, transform .12s, box-shadow .15s; }
         .restock-btn:hover:not(:disabled) { background:var(--c-accent); color:#fff; box-shadow:0 3px 12px var(--c-accent-glow); transform:translateY(-1px); }
         .restock-btn:disabled { opacity:.45; cursor:not-allowed; }
-
-        /* ── Sales hint ── */
-        .sales-hint {
-          display:inline-flex; align-items:center; gap:5px;
-          font-size:11px; font-weight:600; color:var(--c-text3);
-          background:var(--c-elevated); border:1px solid var(--c-border);
-          border-radius:99px; padding:4px 10px;
-          white-space:nowrap;
-        }
-
-        /* ── Busy overlay ── */
+        .sales-hint { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:var(--c-text3); background:var(--c-elevated); border:1px solid var(--c-border); border-radius:99px; padding:4px 10px; white-space:nowrap; }
         .card-busy-overlay { position:absolute; inset:0; background:rgba(0,0,0,.04); display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--c-accent); font-weight:700; animation:pulse 1s infinite; border-radius:var(--r-lg); backdrop-filter:blur(1px); }
-
-        /* ── Stepper ── */
         .step-btn { width:30px; height:30px; display:flex; align-items:center; justify-content:center; background:var(--c-surface); border:1.5px solid var(--c-border); border-radius:8px; color:var(--c-text2); font-size:16px; font-weight:600; cursor:pointer; transition:background .14s, border-color .14s, color .14s, transform .12s; line-height:1; }
         .step-btn:hover:not(:disabled) { background:var(--c-accent); border-color:var(--c-accent); color:#fff; transform:scale(1.15); }
         .step-btn:active:not(:disabled) { transform:scale(.88); }
         .step-btn:disabled { opacity:.35; cursor:not-allowed; }
-
-        /* ── Modal ── */
         .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.45); backdrop-filter:blur(4px); z-index:100; display:flex; align-items:center; justify-content:center; padding:20px; animation:fadeIn .15s ease; }
         .modal-box { background:var(--c-surface); border:1px solid var(--c-border-md); border-radius:var(--r-xl); padding:24px; width:100%; max-width:360px; box-shadow:0 16px 64px rgba(0,0,0,.2); animation:modalIn .22s cubic-bezier(.22,.68,0,1.2); }
         .modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
@@ -514,15 +410,11 @@ function AquaticInventoryPage() {
         .modal-footer { display:flex; gap:8px; margin-top:20px; }
         .cancel-btn { height:40px; padding:0 16px; background:var(--c-elevated); border:1.5px solid var(--c-border); border-radius:var(--r-sm); color:var(--c-text2); font-size:13px; font-weight:700; font-family:inherit; cursor:pointer; transition:background .15s, color .15s; }
         .cancel-btn:hover { background:var(--c-border); color:var(--c-text); }
-
-        /* ── Empty / Loading ── */
         .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:64px 24px; color:var(--c-text3); text-align:center; }
         .empty-state svg { opacity:.35; }
         .empty-state p { margin:0; font-size:15px; }
         .empty-state small { font-size:13px; }
         .skeleton-card { height:200px; background:linear-gradient(90deg,var(--c-elevated) 25%,var(--c-border) 50%,var(--c-elevated) 75%); background-size:400% 100%; animation:sk 1.6s ease infinite; border-radius:var(--r-lg); border:1px solid var(--c-border); }
-
-        /* ── Desktop table ── */
         .table-card { background:var(--c-surface); border:1px solid var(--c-border); border-radius:var(--r-xl); box-shadow:var(--c-shadow-sm); overflow:hidden; }
         .inv-table { width:100%; border-collapse:collapse; }
         .inv-table thead tr { background:var(--c-elevated); border-bottom:1px solid var(--c-border); }
@@ -534,24 +426,13 @@ function AquaticInventoryPage() {
         .inv-table tbody tr:hover .fish-cell-icon { background:var(--c-accent-glow); transform:scale(1.1) rotate(-5deg); }
         .fish-cell { display:flex; align-items:center; gap:10px; }
         .fish-cell-icon { width:32px; height:32px; border-radius:9px; background:var(--c-accent-lt); display:flex; align-items:center; justify-content:center; color:var(--c-accent); flex-shrink:0; transition:background .18s, transform .18s; }
-
-        /* ── Table action buttons ── */
         .tbl-restock-btn { display:inline-flex; align-items:center; gap:4px; height:30px; padding:0 10px; background:var(--c-accent-lt); border:1.5px solid var(--c-accent); border-radius:8px; color:var(--c-accent); font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; transition:background .14s, color .14s, transform .12s; white-space:nowrap; }
         .tbl-restock-btn:hover:not(:disabled) { background:var(--c-accent); color:#fff; transform:translateY(-1px); }
         .tbl-restock-btn:disabled { opacity:.4; cursor:not-allowed; }
-        .tbl-remove-btn { width:30px; height:30px; display:flex; align-items:center; justify-content:center; background:none; border:none; border-radius:8px; color:var(--c-text3); cursor:pointer; transition:background .14px, color .14s, transform .12s; }
+        .tbl-remove-btn { width:30px; height:30px; display:flex; align-items:center; justify-content:center; background:none; border:none; border-radius:8px; color:var(--c-text3); cursor:pointer; transition:background .14s, color .14s, transform .12s; }
         .tbl-remove-btn:hover:not(:disabled) { background:rgba(199,107,107,.10); color:var(--c-danger); transform:scale(1.1); }
         .tbl-remove-btn:disabled { opacity:.35; cursor:not-allowed; }
-
-        /* ── Sales source badge (table) ── */
-        .sales-source-badge {
-          display:inline-flex; align-items:center; gap:4px;
-          font-size:11px; font-weight:600; color:var(--c-text3);
-          background:var(--c-elevated); border:1px solid var(--c-border);
-          border-radius:6px; padding:3px 8px;
-        }
-
-        /* ── Responsive ── */
+        .sales-source-badge { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:var(--c-text3); background:var(--c-elevated); border:1px solid var(--c-border); border-radius:6px; padding:3px 8px; }
         .mobile-only  { display:block; }
         .desktop-only { display:none; }
         @media (min-width: 768px) { .mobile-only { display:none !important; } .desktop-only { display:block !important; } }
@@ -559,7 +440,6 @@ function AquaticInventoryPage() {
         @media (hover: none) { .remove-btn { opacity:1; } }
       `}</style>
 
-      {/* ── Restock Modal ───────────────────────────────────────────────── */}
       {restockRow && (
         <RestockModal
           row={restockRow}
@@ -569,13 +449,11 @@ function AquaticInventoryPage() {
         />
       )}
 
-      {/* ── Page Header ─────────────────────────────────────── */}
       <header className="page-header fade-up" style={{ animationDelay: "0ms" }}>
         <h1 className="page-title">Ronin's <span>Aquatic</span></h1>
         <p className="page-sub">Live inventory — every breed, every count.</p>
       </header>
 
-      {/* ── Stat strip ─────────────────────────────────────── */}
       <div className="stat-strip fade-up" style={{ animationDelay: "60ms" }}>
         <div className="stat-card">
           <span className="stat-label">Species</span>
@@ -595,7 +473,6 @@ function AquaticInventoryPage() {
         </div>
       </div>
 
-      {/* ── Add form ────────────────────────────────────────── */}
       <div className="form-card fade-up" style={{ animationDelay: "120ms" }}>
         <p className="form-heading">Add new fish</p>
         <div className="form-grid">
@@ -627,14 +504,12 @@ function AquaticInventoryPage() {
         </div>
       </div>
 
-      {/* ── Loading ─────────────────────────────────────────── */}
       {isLoading && (
         <div className="card-list mobile-only">
           {[0,1,2].map((i) => <div key={i} className="skeleton-card" style={{ animationDelay:`${i*80}ms` }} />)}
         </div>
       )}
 
-      {/* ── Empty ───────────────────────────────────────────── */}
       {!isLoading && rows.length === 0 && (
         <div className="empty-state fade-up" style={{ animationDelay: "180ms" }}>
           <svg viewBox="0 0 64 64" fill="none" width="64" height="64" aria-hidden="true">
@@ -646,7 +521,6 @@ function AquaticInventoryPage() {
         </div>
       )}
 
-      {/* ── Mobile card list ─────────────────────────────────── */}
       {!isLoading && rows.length > 0 && (
         <div className="card-list mobile-only">
           {rows.map((row, idx) => (
@@ -662,7 +536,6 @@ function AquaticInventoryPage() {
         </div>
       )}
 
-      {/* ── Desktop table ────────────────────────────────────── */}
       {!isLoading && rows.length > 0 && (
         <div className="table-card desktop-only fade-up" style={{ animationDelay: "180ms" }}>
           <div style={{ overflowX: "auto" }}>
@@ -702,28 +575,16 @@ function AquaticInventoryPage() {
                           {label}
                         </span>
                       </td>
+                      <td><span style={{ fontWeight: 700, color: "var(--c-ok)" }}>{row.stock_in}</span></td>
+                      <td><span style={{ fontWeight: 700, color: "var(--c-warn)" }}>{row.stock_out}</span></td>
                       <td>
-                        <span style={{ fontWeight: 700, color: "var(--c-ok)" }}>{row.stock_in}</span>
-                      </td>
-                      <td>
-                        {/* Derived from aquatic_sales — not a stored column */}
-                        <span style={{ fontWeight: 700, color: "var(--c-warn)" }}>{row.stock_out}</span>
-                      </td>
-                      <td>
-                        <span style={{
-                          fontSize: 15, fontWeight: 800,
-                          color: current <= 0 ? "var(--c-danger)" : current <= 5 ? "var(--c-warn)" : "var(--c-accent)",
-                        }}>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: current <= 0 ? "var(--c-danger)" : current <= 5 ? "var(--c-warn)" : "var(--c-accent)" }}>
                           {current}
                         </span>
                       </td>
                       <td>
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                          <button
-                            className="tbl-restock-btn"
-                            onClick={() => setRestockTarget(row)}
-                            disabled={isBusy}
-                          >
+                          <button className="tbl-restock-btn" onClick={() => setRestockTarget(row)} disabled={isBusy}>
                             + Restock
                           </button>
                           <span className="sales-source-badge">

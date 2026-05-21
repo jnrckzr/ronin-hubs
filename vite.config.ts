@@ -1,20 +1,20 @@
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { defineConfig } from "vite";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import tsconfigPaths from "vite-tsconfig-paths";
 import { join } from "path";
 
-const src = join(process.cwd(), "src");
-
 export default defineConfig({
-  cloudflare: false,
-  vite: {
-    resolve: {
-      alias: [{ find: /^@\//, replacement: src + "/" }],
-    },
-  },
-  tanstackStart: {
-    importProtection: false,
-    server: {
-      preset: "vercel",
-      entry: "src/server",
+  plugins: [
+    tanstackStart({
+      server: {
+        entry: "src/server",
+      },
+    }),
+    tsconfigPaths(),
+  ],
+  resolve: {
+    alias: {
+      "@": join(process.cwd(), "src"),
     },
   },
 });

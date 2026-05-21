@@ -12,25 +12,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/providers";
 import { WATCH_BRANDS } from "@/lib/constants";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import { useNavigate } from "@tanstack/react-router";
-import { useRole } from "@/hooks/use-role";
-
-export default function AquaticPage() {
-  const { isLimited, loading } = useRole();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!loading && isLimited) {
-      navigate({ to: "/dashboard" });
-    }
-  }, [isLimited, loading]);
-
-  if (loading) return null;
-
-  return <div />;
-}
 
 export const Route = createFileRoute("/businesses/timepieces")({
   head: () => ({ meta: [{ title: "Timepieces Inventory — Ronin's Hub" }] }),
@@ -187,7 +170,6 @@ function Page() {
   const { user } = useAuth();
   const qc = useQueryClient();
 
-  /* form state */
   const [brand,     setBrand]     = useState("");
   const [model,     setModel]     = useState("");
   const [reference, setReference] = useState("");
@@ -237,11 +219,9 @@ function Page() {
   const brands = Object.keys(WATCH_BRANDS);
   const models = brand ? (WATCH_BRANDS as any)[brand] : [];
 
-  /* ── Add new watch ── */
   const addNew = async (): Promise<void> => {
     if (!brand || !model || !user) { toast.error("Pick brand and model"); return; }
     setAdding(true);
-    // Cast to `any` to bypass Supabase generated-type strictness on nullable columns
     const payload: any = {
       user_id:   user.id,
       brand,
@@ -253,9 +233,7 @@ function Page() {
       stock_in:  Number(stockIn),
       stock_out: 0,
     };
-    const { error } = await supabase
-      .from("timepieces_inventory")
-      .insert(payload);
+    const { error } = await supabase.from("timepieces_inventory").insert(payload);
     setAdding(false);
     if (error) { toast.error(error.message); return; }
     setBrand(""); setModel(""); setReference(""); setNickname(""); setMovement(""); setYear(""); setStockIn("0");
@@ -263,7 +241,6 @@ function Page() {
     toast.success(`${brand} ${model} added to inventory`);
   };
 
-  /* ── Restock ── */
   const confirmRestock = async (qty: number): Promise<void> => {
     if (!restockTarget) return;
     const { id, stock_in, brand: b, model: m } = restockTarget;
@@ -279,7 +256,6 @@ function Page() {
     toast.success(`Restocked ${qty} × ${b} ${m}`);
   };
 
-  /* ── Remove ── */
   const remove = async (id: string): Promise<void> => {
     const row = rows.find((r: any) => r.id === id);
     if (!row) return;
@@ -300,7 +276,6 @@ function Page() {
     ? rows.find((r: any) => r.id === restockTarget.id) ?? restockTarget
     : null;
 
-  /* ─────────────────────── RENDER ──────────────────────────────────────── */
   return (
     <div className="tp-root">
       <style>{`
@@ -328,7 +303,6 @@ function Page() {
         }
         .tp-root*{box-sizing:border-box;}
         .tp-root{padding:clamp(12px,3vw,28px);min-height:100vh;}
-
         @keyframes tp-fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes tp-fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes tp-shimmer{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
@@ -336,14 +310,10 @@ function Page() {
         @keyframes tp-sk{from{background-position:-200% 0}to{background-position:200% 0}}
         @keyframes tp-modalIn{from{opacity:0;transform:scale(.94) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
         .tp-fade-up{animation:tp-fadeUp .38s cubic-bezier(.22,.68,0,1.2) both;}
-
-        /* Header */
         .tp-root .page-header{margin-bottom:24px;}
         .tp-root .page-title{font-size:clamp(1.6rem,4.5vw,2.6rem);font-weight:800;letter-spacing:-0.03em;line-height:1.1;color:var(--c-text);margin:0 0 4px;}
         .tp-root .page-title span{color:var(--c-accent);}
         .tp-root .page-sub{font-size:clamp(0.8rem,2vw,0.95rem);color:var(--c-text2);margin:0;}
-
-        /* Stat strip */
         .tp-root .stat-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px;}
         .tp-root .stat-card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-md);padding:14px 16px;box-shadow:var(--c-shadow-sm);position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s,border-color .2s;}
         .tp-root .stat-card:hover{transform:translateY(-2px);box-shadow:var(--c-shadow-md);border-color:var(--c-border-md);}
@@ -353,14 +323,10 @@ function Page() {
         .tp-root .stat-card.warn::before{background:var(--c-warn);}
         .tp-root .stat-label{font-size:.68rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-text3);display:block;margin-bottom:6px;}
         .tp-root .stat-value{font-size:clamp(1.4rem,3vw,2rem);font-weight:800;color:var(--c-text);letter-spacing:-0.02em;line-height:1;}
-
-        /* Form card */
         .tp-root .form-card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-xl);padding:clamp(16px,3vw,24px);box-shadow:var(--c-shadow-sm);margin-bottom:20px;transition:border-color .25s,box-shadow .25s;}
         .tp-root .form-card:focus-within{border-color:var(--c-border-md);box-shadow:var(--c-shadow-md);}
         .tp-root .form-heading{font-size:.82rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-text3);margin:0 0 16px;display:flex;align-items:center;gap:8px;}
         .tp-root .form-heading svg{color:var(--c-accent);}
-
-        /* Form grids */
         .tp-root .form-row{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:12px;}
         @media(min-width:480px){.tp-root .form-row{grid-template-columns:1fr 2fr;}}
         @media(min-width:768px){.tp-root .form-row{grid-template-columns:1.2fr 2fr;}}
@@ -369,14 +335,11 @@ function Page() {
         @media(min-width:900px){.tp-root .form-row-2{grid-template-columns:1fr 1fr 1fr 140px;}}
         .tp-root .form-row-3{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px;}
         @media(min-width:540px){.tp-root .form-row-3{grid-template-columns:140px 1fr auto;align-items:end;}}
-
         .tp-root .form-label{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--c-text2);display:block;margin-bottom:6px;}
         .tp-root .form-input{width:100%;height:42px;padding:0 12px;background:var(--c-elevated);border:1.5px solid var(--c-border);border-radius:var(--r-sm);color:var(--c-text);font-size:14px;font-family:inherit;outline:none;transition:border-color .18s,box-shadow .18s;}
         .tp-root .form-input:hover{border-color:var(--c-border-md);}
         .tp-root .form-input:focus{border-color:var(--c-accent);box-shadow:0 0 0 3px var(--c-accent-lt);}
         .tp-root .form-input::placeholder{color:var(--c-text3);}
-
-        /* Add btn */
         .tp-root .add-btn{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:6px;height:42px;padding:0 20px;background:var(--c-accent);color:#fff;border:none;border-radius:var(--r-sm);font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;transition:background .18s,transform .14s,box-shadow .18s;width:100%;}
         @media(min-width:480px){.tp-root .add-btn{width:auto;}}
         .tp-root .add-btn:hover:not(:disabled){background:var(--c-hover);box-shadow:0 4px 20px var(--c-accent-glow);transform:translateY(-1px);}
@@ -384,11 +347,7 @@ function Page() {
         .tp-root .add-btn:disabled{opacity:.6;cursor:not-allowed;}
         .tp-root .add-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);transform:translateX(-100%);pointer-events:none;}
         .tp-root .add-btn:hover:not(:disabled)::after{animation:tp-shimmer .55s ease;}
-
-        /* Card list */
         .tp-root .card-list{display:flex;flex-direction:column;gap:12px;}
-
-        /* Inventory card */
         .tp-root .inv-card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-lg);padding:clamp(14px,3vw,20px);box-shadow:var(--c-shadow-sm);position:relative;overflow:hidden;animation:tp-fadeUp .35s cubic-bezier(.22,.68,0,1.2) both;transition:border-color .22s,box-shadow .22s,transform .22s;}
         .tp-root .inv-card:hover{border-color:var(--c-border-md);box-shadow:var(--c-shadow-md);transform:translateY(-2px);}
         .tp-root .inv-card-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;}
@@ -403,8 +362,6 @@ function Page() {
         .tp-root .watch-year{font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(91,191,163,.12);color:var(--c-accent3);border:1px solid rgba(91,191,163,.25);}
         .tp-root .watch-nick{font-size:11px;font-weight:600;color:var(--c-text2);font-style:italic;}
         .tp-root .watch-movement{display:inline-block;margin-top:3px;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(136,120,255,.10);color:var(--c-accent2);border:1px solid rgba(136,120,255,.2);}
-
-        /* Status pill */
         .tp-root .status-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;letter-spacing:.05em;padding:3px 8px;border-radius:99px;margin-top:3px;}
         .tp-root .status-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
         .tp-root .status-empty{background:rgba(199,107,107,.12);color:#C76B6B;}
@@ -415,13 +372,9 @@ function Page() {
         .dark .tp-root .status-low{color:#D6A86A;background:rgba(214,168,106,.12);}
         .dark .tp-root .status-ok{color:#89B89A;background:rgba(137,184,154,.12);}
         .dark .tp-root .status-great{color:#7DA2FF;background:rgba(125,162,255,.12);}
-
-        /* Remove btn */
         .tp-root .remove-btn{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:none;border:none;border-radius:var(--r-sm);color:var(--c-text3);cursor:pointer;flex-shrink:0;transition:background .15s,color .15s,transform .12s;}
         .tp-root .remove-btn:hover:not(:disabled){background:rgba(199,107,107,.1);color:var(--c-danger);transform:scale(1.1);}
         .tp-root .remove-btn:disabled{opacity:.4;cursor:not-allowed;}
-
-        /* Stock displays */
         .tp-root .current-stock-display{display:flex;align-items:baseline;gap:6px;background:var(--c-elevated);border:1px solid var(--c-border);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:12px;}
         .tp-root .current-num{font-size:2rem;font-weight:800;letter-spacing:-0.03em;line-height:1;transition:color .2s;}
         .tp-root .current-label{font-size:13px;color:var(--c-text2);}
@@ -432,22 +385,16 @@ function Page() {
         .tp-root .summary-val.in{color:var(--c-ok);}
         .tp-root .summary-val.out{color:var(--c-warn);}
         .tp-root .summary-divider{width:1px;align-self:stretch;background:var(--c-border);flex-shrink:0;}
-
-        /* Card actions */
         .tp-root .card-actions{display:flex;align-items:center;gap:10px;}
         .tp-root .restock-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;height:38px;background:var(--c-accent-lt);border:1.5px solid var(--c-accent);border-radius:var(--r-sm);color:var(--c-accent);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s,transform .12s,box-shadow .15s;}
         .tp-root .restock-btn:hover:not(:disabled){background:var(--c-accent);color:#fff;box-shadow:0 3px 12px var(--c-accent-glow);transform:translateY(-1px);}
         .tp-root .restock-btn:disabled{opacity:.45;cursor:not-allowed;}
         .tp-root .sales-hint{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--c-text3);background:var(--c-elevated);border:1px solid var(--c-border);border-radius:99px;padding:4px 10px;white-space:nowrap;}
         .tp-root .card-busy-overlay{position:absolute;inset:0;background:rgba(0,0,0,.04);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--c-accent);font-weight:700;animation:tp-pulse 1s infinite;border-radius:var(--r-lg);backdrop-filter:blur(1px);}
-
-        /* Stepper */
         .tp-root .step-btn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:var(--c-surface);border:1.5px solid var(--c-border);border-radius:8px;color:var(--c-text2);font-size:16px;font-weight:600;cursor:pointer;transition:background .14s,border-color .14s,color .14s,transform .12s;line-height:1;}
         .tp-root .step-btn:hover:not(:disabled){background:var(--c-accent);border-color:var(--c-accent);color:#fff;transform:scale(1.15);}
         .tp-root .step-btn:active:not(:disabled){transform:scale(.88);}
         .tp-root .step-btn:disabled{opacity:.35;cursor:not-allowed;}
-
-        /* Modal */
         .tp-root .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;animation:tp-fadeIn .15s ease;}
         .tp-root .modal-box{background:var(--c-surface);border:1px solid var(--c-border-md);border-radius:var(--r-xl);padding:24px;width:100%;max-width:380px;box-shadow:0 16px 64px rgba(0,0,0,.2);animation:tp-modalIn .22s cubic-bezier(.22,.68,0,1.2);}
         .tp-root .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
@@ -461,11 +408,7 @@ function Page() {
         .tp-root .modal-footer{display:flex;gap:8px;margin-top:20px;}
         .tp-root .cancel-btn{height:40px;padding:0 16px;background:var(--c-elevated);border:1.5px solid var(--c-border);border-radius:var(--r-sm);color:var(--c-text2);font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s,color .15s;}
         .tp-root .cancel-btn:hover{background:var(--c-border);color:var(--c-text);}
-
-        /* Skeleton */
         .tp-root .skeleton-card{height:220px;background:linear-gradient(90deg,var(--c-elevated) 25%,var(--c-border) 50%,var(--c-elevated) 75%);background-size:400% 100%;animation:tp-sk 1.6s ease infinite;border-radius:var(--r-lg);border:1px solid var(--c-border);}
-
-        /* Desktop table */
         .tp-root .table-card{background:var(--c-surface);border:1px solid var(--c-border);border-radius:var(--r-xl);box-shadow:var(--c-shadow-sm);overflow:hidden;}
         .tp-root .inv-table{width:100%;border-collapse:collapse;}
         .tp-root .inv-table thead tr{background:var(--c-elevated);border-bottom:1px solid var(--c-border);}
@@ -477,14 +420,10 @@ function Page() {
         .tp-root .inv-table tbody tr:hover .watch-cell-icon{background:var(--c-accent-glow);transform:scale(1.1) rotate(-5deg);}
         .tp-root .watch-cell{display:flex;align-items:center;gap:10px;}
         .tp-root .watch-cell-icon{width:32px;height:32px;border-radius:9px;background:var(--c-accent-lt);display:flex;align-items:center;justify-content:center;color:var(--c-accent);flex-shrink:0;transition:background .18s,transform .18s;}
-
-        /* Table meta badges */
         .tp-root .tbl-ref{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(110,142,247,.10);color:var(--c-accent);border:1px solid rgba(110,142,247,.2);}
         .tp-root .tbl-year{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(91,191,163,.12);color:var(--c-accent3);border:1px solid rgba(91,191,163,.25);}
         .tp-root .tbl-nick{font-size:12px;color:var(--c-text3);font-style:italic;margin-top:2px;display:block;}
         .tp-root .tbl-movement{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;background:rgba(136,120,255,.10);color:var(--c-accent2);border:1px solid rgba(136,120,255,.2);}
-
-        /* Table actions */
         .tp-root .tbl-restock-btn{display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 10px;background:var(--c-accent-lt);border:1.5px solid var(--c-accent);border-radius:8px;color:var(--c-accent);font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .14s,color .14s,transform .12s;white-space:nowrap;}
         .tp-root .tbl-restock-btn:hover:not(:disabled){background:var(--c-accent);color:#fff;transform:translateY(-1px);}
         .tp-root .tbl-restock-btn:disabled{opacity:.4;cursor:not-allowed;}
@@ -492,14 +431,10 @@ function Page() {
         .tp-root .tbl-remove-btn:hover:not(:disabled){background:rgba(199,107,107,.10);color:var(--c-danger);transform:scale(1.1);}
         .tp-root .tbl-remove-btn:disabled{opacity:.35;cursor:not-allowed;}
         .tp-root .sales-source-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--c-text3);background:var(--c-elevated);border:1px solid var(--c-border);border-radius:6px;padding:3px 8px;}
-
-        /* Empty state */
         .tp-root .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:64px 24px;color:var(--c-text3);text-align:center;}
         .tp-root .empty-state svg{opacity:.35;}
         .tp-root .empty-state p{margin:0;font-size:15px;}
         .tp-root .empty-state small{font-size:13px;}
-
-        /* Responsive */
         .tp-root .mobile-only{display:block;}
         .tp-root .desktop-only{display:none;}
         @media(min-width:768px){.tp-root .mobile-only{display:none !important;}.tp-root .desktop-only{display:block !important;}}
@@ -507,7 +442,6 @@ function Page() {
         @media(hover:none){.tp-root .remove-btn{opacity:1;}}
       `}</style>
 
-      {/* ── Restock Modal ─────────────────────────────────── */}
       {restockRow && (
         <RestockModal
           row={restockRow}
@@ -517,13 +451,11 @@ function Page() {
         />
       )}
 
-      {/* ── Header ─────────────────────────────────────────── */}
       <header className="page-header tp-fade-up" style={{ animationDelay: "0ms" }}>
         <h1 className="page-title">Ronin's <span>Timepieces</span></h1>
         <p className="page-sub">Every brand, every reference, in stock.</p>
       </header>
 
-      {/* ── Stat strip ─────────────────────────────────────── */}
       <div className="stat-strip tp-fade-up" style={{ animationDelay: "60ms" }}>
         <div className="stat-card">
           <span className="stat-label">Models</span>
@@ -543,7 +475,6 @@ function Page() {
         </div>
       </div>
 
-      {/* ── Add form ────────────────────────────────────────── */}
       <div className="form-card tp-fade-up" style={{ animationDelay: "120ms" }}>
         <p className="form-heading">
           <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
@@ -555,7 +486,6 @@ function Page() {
           Add watch to inventory
         </p>
 
-        {/* Row 1: Brand + Model */}
         <div className="form-row">
           <div>
             <label className="form-label">Brand</label>
@@ -579,37 +509,18 @@ function Page() {
           </div>
         </div>
 
-        {/* Row 2: Reference + Nickname + Movement + Year */}
         <div className="form-row-2">
           <div>
             <label className="form-label">Reference No. <span style={{ color: "var(--c-text3)", fontWeight: 400 }}>(opt)</span></label>
-            <input
-              type="text"
-              className="form-input"
-              value={reference}
-              onChange={(e) => setReference(e.target.value)}
-              placeholder="e.g. 126610LN"
-            />
+            <input type="text" className="form-input" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="e.g. 126610LN" />
           </div>
           <div>
             <label className="form-label">Nickname <span style={{ color: "var(--c-text3)", fontWeight: 400 }}>(opt)</span></label>
-            <input
-              type="text"
-              className="form-input"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              placeholder='e.g. "Batman"'
-            />
+            <input type="text" className="form-input" value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder='e.g. "Batman"' />
           </div>
           <div>
             <label className="form-label">Movement <span style={{ color: "var(--c-text3)", fontWeight: 400 }}>(opt)</span></label>
-            <input
-              type="text"
-              className="form-input"
-              value={movement}
-              onChange={(e) => setMovement(e.target.value)}
-              placeholder="e.g. Automatic"
-            />
+            <input type="text" className="form-input" value={movement} onChange={(e) => setMovement(e.target.value)} placeholder="e.g. Automatic" />
           </div>
           <div>
             <label className="form-label">Year <span style={{ color: "var(--c-text3)", fontWeight: 400 }}>(opt)</span></label>
@@ -624,17 +535,10 @@ function Page() {
           </div>
         </div>
 
-        {/* Row 3: Initial stock + Add btn */}
         <div className="form-row-3">
           <div>
             <label className="form-label">Initial stock</label>
-            <input
-              type="number"
-              min="0"
-              value={stockIn}
-              onChange={(e) => setStockIn(e.target.value)}
-              className="form-input"
-            />
+            <input type="number" min="0" value={stockIn} onChange={(e) => setStockIn(e.target.value)} className="form-input" />
           </div>
           <div />
           <div style={{ display: "flex", alignItems: "flex-end" }}>
@@ -652,14 +556,12 @@ function Page() {
         </div>
       </div>
 
-      {/* ── Loading ─────────────────────────────────────────── */}
       {isLoading && (
         <div className="card-list mobile-only">
           {[0, 1, 2].map((i) => <div key={i} className="skeleton-card" style={{ animationDelay: `${i * 80}ms` }} />)}
         </div>
       )}
 
-      {/* ── Empty ───────────────────────────────────────────── */}
       {!isLoading && rows.length === 0 && (
         <div className="empty-state tp-fade-up" style={{ animationDelay: "180ms" }}>
           <svg viewBox="0 0 64 64" fill="none" width="64" height="64">
@@ -673,7 +575,6 @@ function Page() {
         </div>
       )}
 
-      {/* ── Mobile card list ─────────────────────────────────── */}
       {!isLoading && rows.length > 0 && (
         <div className="card-list mobile-only">
           {rows.map((r: any, idx: number) => (
@@ -689,24 +590,15 @@ function Page() {
         </div>
       )}
 
-      {/* ── Desktop table ────────────────────────────────────── */}
       {!isLoading && rows.length > 0 && (
         <div className="table-card desktop-only tp-fade-up" style={{ animationDelay: "180ms" }}>
           <div style={{ overflowX: "auto" }}>
             <table className="inv-table" aria-label="Timepieces inventory">
               <thead>
                 <tr>
-                  <th>Brand</th>
-                  <th>Model</th>
-                  <th>Reference</th>
-                  <th>Year</th>
-                  <th>Movement</th>
-                  <th>Status</th>
-                  <th>Stocked</th>
-                  <th>Sold</th>
-                  <th>On Hand</th>
-                  <th>Actions</th>
-                  <th style={{ width: 44 }} />
+                  <th>Brand</th><th>Model</th><th>Reference</th><th>Year</th>
+                  <th>Movement</th><th>Status</th><th>Stocked</th><th>Sold</th>
+                  <th>On Hand</th><th>Actions</th><th style={{ width: 44 }} />
                 </tr>
               </thead>
               <tbody>
@@ -732,26 +624,12 @@ function Page() {
                         </div>
                       </td>
                       <td style={{ maxWidth: 200 }}>
-                        <span style={{ display: "block", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {r.model}
-                        </span>
+                        <span style={{ display: "block", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.model}</span>
                         {r.nickname && <span className="tbl-nick">"{r.nickname}"</span>}
                       </td>
-                      <td>
-                        {r.reference
-                          ? <span className="tbl-ref">{r.reference}</span>
-                          : <span style={{ color: "var(--c-text3)" }}>—</span>}
-                      </td>
-                      <td>
-                        {r.year
-                          ? <span className="tbl-year">{r.year}</span>
-                          : <span style={{ color: "var(--c-text3)" }}>—</span>}
-                      </td>
-                      <td>
-                        {r.movement
-                          ? <span className="tbl-movement">{r.movement}</span>
-                          : <span style={{ color: "var(--c-text3)" }}>—</span>}
-                      </td>
+                      <td>{r.reference ? <span className="tbl-ref">{r.reference}</span> : <span style={{ color: "var(--c-text3)" }}>—</span>}</td>
+                      <td>{r.year ? <span className="tbl-year">{r.year}</span> : <span style={{ color: "var(--c-text3)" }}>—</span>}</td>
+                      <td>{r.movement ? <span className="tbl-movement">{r.movement}</span> : <span style={{ color: "var(--c-text3)" }}>—</span>}</td>
                       <td>
                         <span className={`status-pill ${cls}`}>
                           <span className="status-dot" style={{ background: dot }} />
@@ -767,9 +645,7 @@ function Page() {
                       </td>
                       <td>
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                          <button className="tbl-restock-btn" onClick={() => setRestockTarget(r)} disabled={isBusy}>
-                            + Restock
-                          </button>
+                          <button className="tbl-restock-btn" onClick={() => setRestockTarget(r)} disabled={isBusy}>+ Restock</button>
                           <span className="sales-source-badge">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="11" height="11">
                               <path d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/>
@@ -779,8 +655,7 @@ function Page() {
                         </div>
                       </td>
                       <td>
-                        <button className="tbl-remove-btn" onClick={() => remove(r.id)} disabled={isBusy}
-                          aria-label={`Remove ${r.brand} ${r.model}`}>
+                        <button className="tbl-remove-btn" onClick={() => remove(r.id)} disabled={isBusy} aria-label={`Remove ${r.brand} ${r.model}`}>
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="15" height="15">
                             <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
                           </svg>
