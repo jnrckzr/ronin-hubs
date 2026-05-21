@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -260,6 +260,7 @@ const HEADER_STYLES = `
     width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
     background: none; border: none; border-radius: var(--r-sm);
     color: var(--text-secondary); cursor: pointer; transition: background .15s, color .15s;
+    position: relative; z-index: 50;
   }
   @media (min-width: 768px) { .rh-hamburger { display: none; } }
   .rh-hamburger:hover { background: var(--bg-elevated); color: var(--text-primary); }
@@ -453,11 +454,10 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  // ── Fetch display_name from profiles ──
   const { data: profile } = useQuery({
     queryKey: ["profile", user?.id],
     enabled: !!user,
-    staleTime: 5 * 60 * 1000, // cache 5 min — shared with dashboard query
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data } = await supabase
         .from("profiles")
@@ -468,10 +468,8 @@ export function Header() {
     },
   });
 
-  // Falls back to "Ronin" if display_name isn't set
   const n = profile?.display_name ?? "Ronin";
 
-  // ── Nav items built with dynamic name ──
   const SALES_ITEMS: NavItem[] = [
     { to: "/sales/aquatic",    label: `${n}'s Aquatic`,    desc: "Fish sales tracker",   icon: <Fish className="h-4 w-4" /> },
     { to: "/sales/timepieces", label: `${n}'s Timepieces`, desc: "Watch sales tracker",  icon: <Watch className="h-4 w-4" /> },
@@ -551,12 +549,16 @@ export function Header() {
             </button>
           )}
 
+          {/* ── Hamburger — manual onClick, no SheetTrigger ── */}
+          <button
+            className="rh-hamburger"
+            aria-label="Open navigation menu"
+            onClick={() => setMobileOpen(true)}
+          >
+            <Menu size={20} />
+          </button>
+
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <button className="rh-hamburger" aria-label="Open navigation menu">
-                <Menu size={20} />
-              </button>
-            </SheetTrigger>
             <SheetContent side="right" className="rh-sheet">
               <SheetHeader className="rh-sheet-header">
                 <SheetTitle asChild>
