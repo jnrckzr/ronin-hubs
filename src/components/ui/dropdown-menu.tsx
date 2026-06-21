@@ -30,20 +30,22 @@ const DropdownMenuSubTrigger = React.forwardRef<
   <DropdownMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      // Layout
-      "flex cursor-default select-none items-center gap-2 rounded-lg px-3 py-2",
-      // Typography
+      "group relative flex cursor-default select-none items-center gap-2 rounded-lg px-3 py-2 pl-4",
       "text-sm font-medium",
       "text-[#1C2230] dark:text-[#F4F1EA]",
-      // States
-      "outline-none transition-colors duration-150",
+      "outline-none transition-all duration-200 ease-out",
+      "before:content-[''] before:absolute before:left-0.5 before:top-1/2 before:-translate-y-1/2",
+      "before:h-0 before:w-0.75 before:rounded-full",
+      "before:bg-[#6E8EF7] dark:before:bg-[#7DA2FF]",
+      "before:transition-all before:duration-200 before:ease-out",
+      "hover:before:h-[55%] data-[state=open]:before:h-[55%]",
       "focus:bg-[#F4F6FB] dark:focus:bg-[#252C3D]",
       "focus:text-[#6E8EF7] dark:focus:text-[#7DA2FF]",
       "data-[state=open]:bg-[#F4F6FB] dark:data-[state=open]:bg-[#252C3D]",
       "data-[state=open]:text-[#6E8EF7] dark:data-[state=open]:text-[#7DA2FF]",
-      // SVG icons
-      "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+      "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:transition-transform [&_svg]:duration-200",
       "[&_svg]:text-muted-foreground dark:[&_svg]:text-[#A2AAB8]",
+      "group-hover:[&_svg]:translate-x-0.5",
       inset && "pl-8",
       className,
     )}
@@ -64,17 +66,12 @@ const DropdownMenuSubContent = React.forwardRef<
   <DropdownMenuPrimitive.SubContent
     ref={ref}
     className={cn(
-      // Size & layout
       "z-50 min-w-32 overflow-hidden",
-      // Shape & surface
       "rounded-xl p-1.5",
       "bg-[#FFFFFF] dark:bg-[#1D2330]",
       "border border-[#D9DEE8] dark:border-[#2C3445]",
-      // Elevation
       "shadow-[0_8px_32px_rgba(0,0,0,0.10)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)]",
-      // Text
       "text-[#1C2230] dark:text-[#F4F1EA]",
-      // Animations
       "data-[state=open]:animate-in data-[state=closed]:animate-out",
       "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -99,18 +96,13 @@ const DropdownMenuContent = React.forwardRef<
       ref={ref}
       sideOffset={sideOffset}
       className={cn(
-        // Size & layout
         "z-50 min-w-48 overflow-hidden",
         "max-h-(--radix-dropdown-menu-content-available-height) overflow-y-auto",
-        // Shape & surface — Soft Navy Slate card
         "rounded-xl p-1.5",
         "bg-[#FFFFFF] dark:bg-[#1D2330]",
         "border border-[#D9DEE8] dark:border-[#2C3445]",
-        // Cinematic elevation shadow
         "shadow-[0_8px_32px_rgba(0,0,0,0.10)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)]",
-        // Text
         "text-[#1C2230] dark:text-[#F4F1EA]",
-        // Animations
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -138,30 +130,29 @@ const DropdownMenuItem = React.forwardRef<
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      // Layout
-      "relative flex cursor-default select-none items-center gap-2.5",
-      "rounded-lg px-3 py-2",
-      // Typography
-      "text-sm font-medium outline-none",
-      // Colors — normal
+      "group relative flex cursor-default select-none items-center gap-2.5",
+      "rounded-lg px-3 py-2 pl-4",
+      "text-sm font-medium outline-none transition-all duration-200 ease-out",
+      "before:content-[''] before:absolute before:left-0.5 before:top-1/2 before:-translate-y-1/2",
+      "before:h-0 before:w-0.75 before:rounded-full before:transition-all before:duration-200 before:ease-out",
+      "hover:before:h-[55%]",
       !destructive && [
         "text-[#1C2230] dark:text-[#F4F1EA]",
+        "before:bg-[#6E8EF7] dark:before:bg-[#7DA2FF]",
         "focus:bg-[#F4F6FB] dark:focus:bg-[#252C3D]",
         "focus:text-[#6E8EF7] dark:focus:text-[#7DA2FF]",
       ],
-      // Colors — destructive
       destructive && [
         "text-destructive dark:text-[#D67C7C]",
+        "before:bg-destructive dark:before:bg-[#D67C7C]",
         "focus:bg-destructive/8 dark:focus:bg-[#D67C7C]/10",
         "focus:text-destructive dark:focus:text-[#D67C7C]",
       ],
-      // Transition
-      "transition-colors duration-150",
-      // Disabled
       "data-disabled:pointer-events-none data-disabled:opacity-40",
-      // SVG
-      "[&>svg]:size-4 [&>svg]:shrink-0",
+      "[&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:transition-all [&>svg]:duration-200",
       "[&>svg]:text-muted-foreground dark:[&>svg]:text-[#A2AAB8]",
+      "group-hover:[&>svg]:scale-110",
+      !destructive && "group-hover:[&>svg]:text-[#6E8EF7] dark:group-hover:[&>svg]:text-[#7DA2FF]",
       inset && "pl-8",
       className,
     )}
@@ -175,31 +166,36 @@ DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName;
 const DropdownMenuCheckboxItem = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.CheckboxItem>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.CheckboxItem>
->(({ className, children, checked, ...props }, ref) => (
+>(({ className, children, ...props }, ref) => (
   <DropdownMenuPrimitive.CheckboxItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center",
+      "group relative flex cursor-default select-none items-center",
       "rounded-lg py-2 pl-8 pr-3",
       "text-sm font-medium",
       "text-[#1C2230] dark:text-[#F4F1EA]",
-      "outline-none transition-colors duration-150",
+      "outline-none transition-all duration-200 ease-out",
+      "before:content-[''] before:absolute before:left-1 before:top-1/2 before:-translate-y-1/2",
+      "before:h-0 before:w-0.75 before:rounded-full",
+      "before:bg-[#6E8EF7] dark:before:bg-[#7DA2FF]",
+      "before:transition-all before:duration-200 before:ease-out",
+      "hover:before:h-[55%] data-[state=checked]:before:h-[55%]",
+      "hover:bg-[#F4F6FB] dark:hover:bg-[#252C3D]",
       "focus:bg-[#F4F6FB] dark:focus:bg-[#252C3D]",
       "focus:text-[#6E8EF7] dark:focus:text-[#7DA2FF]",
       "data-disabled:pointer-events-none data-disabled:opacity-40",
       className,
     )}
-    checked={checked}
     {...props}
   >
     {/* Check indicator box */}
     <span
       className={cn(
         "absolute left-2.5 flex h-4 w-4 items-center justify-center",
-        "rounded border",
+        "rounded border transition-transform duration-200",
         "border-[#D9DEE8] dark:border-[#2C3445]",
         "bg-[#F4F6FB] dark:bg-[#252C3D]",
-        // When checked — accent fill
+        "group-hover:scale-110",
         "data-[state=checked]:border-[#6E8EF7] dark:data-[state=checked]:border-[#7DA2FF]",
         "data-[state=checked]:bg-[#6E8EF7] dark:data-[state=checked]:bg-[#7DA2FF]",
       )}
@@ -222,11 +218,12 @@ const DropdownMenuRadioItem = React.forwardRef<
   <DropdownMenuPrimitive.RadioItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center",
+      "group relative flex cursor-default select-none items-center",
       "rounded-lg py-2 pl-8 pr-3",
       "text-sm font-medium",
       "text-[#1C2230] dark:text-[#F4F1EA]",
-      "outline-none transition-colors duration-150",
+      "outline-none transition-all duration-200 ease-out",
+      "hover:bg-[#F4F6FB] dark:hover:bg-[#252C3D]",
       "focus:bg-[#F4F6FB] dark:focus:bg-[#252C3D]",
       "focus:text-[#6E8EF7] dark:focus:text-[#7DA2FF]",
       "data-disabled:pointer-events-none data-disabled:opacity-40",
@@ -238,9 +235,10 @@ const DropdownMenuRadioItem = React.forwardRef<
     <span className="absolute left-2.5 flex h-4 w-4 items-center justify-center">
       <span
         className={cn(
-          "flex h-4 w-4 items-center justify-center rounded-full",
+          "flex h-4 w-4 items-center justify-center rounded-full transition-transform duration-200",
           "border border-[#D9DEE8] dark:border-[#2C3445]",
           "bg-[#F4F6FB] dark:bg-[#252C3D]",
+          "group-hover:scale-110",
         )}
       >
         <DropdownMenuPrimitive.ItemIndicator>
@@ -329,81 +327,3 @@ export {
   DropdownMenuSubTrigger,
   DropdownMenuRadioGroup,
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// USAGE EXAMPLES
-// ─────────────────────────────────────────────────────────────────────────────
-
-/*
-// 1. Basic dropdown
-<DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <button>Open menu</button>
-  </DropdownMenuTrigger>
-  <DropdownMenuContent>
-    <DropdownMenuLabel>My Account</DropdownMenuLabel>
-    <DropdownMenuSeparator />
-    <DropdownMenuItem>
-      <User /> Profile
-      <DropdownMenuShortcut>⌘P</DropdownMenuShortcut>
-    </DropdownMenuItem>
-    <DropdownMenuItem>
-      <Settings /> Settings
-      <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
-    </DropdownMenuItem>
-    <DropdownMenuSeparator />
-    <DropdownMenuItem destructive>
-      <LogOut /> Sign out
-    </DropdownMenuItem>
-  </DropdownMenuContent>
-</DropdownMenu>
-
-// 2. With checkbox items
-<DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <button>View options</button>
-  </DropdownMenuTrigger>
-  <DropdownMenuContent>
-    <DropdownMenuLabel>Appearance</DropdownMenuLabel>
-    <DropdownMenuSeparator />
-    <DropdownMenuCheckboxItem checked={showGrid} onCheckedChange={setShowGrid}>
-      Show grid
-    </DropdownMenuCheckboxItem>
-    <DropdownMenuCheckboxItem checked={showRuler} onCheckedChange={setShowRuler}>
-      Show ruler
-    </DropdownMenuCheckboxItem>
-  </DropdownMenuContent>
-</DropdownMenu>
-
-// 3. With radio group
-<DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <button>Sort by</button>
-  </DropdownMenuTrigger>
-  <DropdownMenuContent>
-    <DropdownMenuRadioGroup value={sort} onValueChange={setSort}>
-      <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
-      <DropdownMenuRadioItem value="date">Date</DropdownMenuRadioItem>
-      <DropdownMenuRadioItem value="size">Size</DropdownMenuRadioItem>
-    </DropdownMenuRadioGroup>
-  </DropdownMenuContent>
-</DropdownMenu>
-
-// 4. With submenu
-<DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <button>More</button>
-  </DropdownMenuTrigger>
-  <DropdownMenuContent>
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger>
-        <Share2 /> Share
-      </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent>
-        <DropdownMenuItem>Email link</DropdownMenuItem>
-        <DropdownMenuItem>Copy link</DropdownMenuItem>
-      </DropdownMenuSubContent>
-    </DropdownMenuSub>
-  </DropdownMenuContent>
-</DropdownMenu>
-*/

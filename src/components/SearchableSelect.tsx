@@ -89,17 +89,21 @@ export function SearchableSelect({
 
       {/*
         PopoverContent:
+        - bg-popover + text-popover-foreground give it an OPAQUE surface.
+          Without this, the panel is transparent and page content behind
+          it (e.g. dashboard stats) bleeds through the list — this was
+          the root cause of the unreadable, overlapping-text dropdown.
+        - z-50 keeps it above sticky headers/sidebars in every route.
         - Width matches trigger (--radix-popover-trigger-width)
         - Max height + scroll so long lists don't overflow viewport on mobile
-        - Higher z-index safe since Radix handles stacking contexts
         - Side offset gives a small gap so it feels "floating"
       */}
       <PopoverContent
-        className="w-(--radix-popover-trigger-width) p-0 shadow-lg rounded-xl border-border/60"
+        className="w-(--radix-popover-trigger-width) p-0 shadow-lg rounded-xl border border-border/60 bg-popover text-popover-foreground z-50"
         align="start"
         sideOffset={6}
       >
-        <Command className="rounded-xl overflow-hidden">
+        <Command className="rounded-xl overflow-hidden bg-popover text-popover-foreground">
           {/* Search input */}
           <div className="flex items-center border-b border-border/60 px-3">
             <Search className="h-3.5 w-3.5 mr-2 shrink-0 opacity-40" />

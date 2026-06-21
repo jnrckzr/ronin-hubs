@@ -14,8 +14,8 @@ const HoverCardTrigger = HoverCardPrimitive.Trigger;
 
 // ─── Content ─────────────────────────────────────────────────────────────────
 
-const HoverCardContent = React.forwardRef<
-  React.ElementRef<typeof HoverCardPrimitive.Content>,
+const HoverCardContent = React.forwardRef
+  <React.ElementRef<typeof HoverCardPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof HoverCardPrimitive.Content> & {
     /** Show the top accent gradient strip (default: true) */
     showStrip?: boolean;
@@ -26,19 +26,13 @@ const HoverCardContent = React.forwardRef<
     align={align}
     sideOffset={sideOffset}
     className={cn(
-      // Size & layout
       "z-50 w-72 overflow-hidden",
-      // Shape & surface — Soft Navy Slate card
       "rounded-xl",
       "bg-[#FFFFFF] dark:bg-[#1D2330]",
       "border border-[#D9DEE8] dark:border-[#2C3445]",
-      // Cinematic elevation shadow
       "shadow-[0_12px_40px_rgba(0,0,0,0.10)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.50)]",
-      // Text
       "text-[#1C2230] dark:text-[#F4F1EA]",
-      // No default outline
       "outline-none",
-      // Animations
       "data-[state=open]:animate-in data-[state=closed]:animate-out",
       "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -63,7 +57,6 @@ const HoverCardContent = React.forwardRef<
 HoverCardContent.displayName = HoverCardPrimitive.Content.displayName;
 
 // ─── Convenience sub-components ───────────────────────────────────────────────
-// Optional helpers for consistent internal layout. Use them or build your own.
 
 /** Avatar / image area at the top of a hover card */
 const HoverCardAvatar = ({
@@ -189,61 +182,3 @@ export {
   HoverCardStats,
   HoverCardStat,
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// USAGE EXAMPLES
-// ─────────────────────────────────────────────────────────────────────────────
-
-/*
-// 1. Basic hover card
-<HoverCard>
-  <HoverCardTrigger asChild>
-    <button className="underline">@cinematic_user</button>
-  </HoverCardTrigger>
-  <HoverCardContent align="start">
-    <HoverCardAvatar fallback="CU" />
-    <HoverCardTitle>Cinematic User</HoverCardTitle>
-    <HoverCardSubtitle>@cinematic_user</HoverCardSubtitle>
-    <HoverCardDescription>
-      Designer & developer building immersive, premium UI experiences.
-    </HoverCardDescription>
-    <HoverCardStats>
-      <HoverCardStat label="Following" value="128" />
-      <HoverCardStat label="Followers" value="4.2k" />
-      <HoverCardStat label="Projects" value="34" />
-    </HoverCardStats>
-  </HoverCardContent>
-</HoverCard>
-
-// 2. No strip variant
-<HoverCard>
-  <HoverCardTrigger asChild>
-    <button>Hover me</button>
-  </HoverCardTrigger>
-  <HoverCardContent showStrip={false}>
-    <HoverCardTitle>Quick Info</HoverCardTitle>
-    <HoverCardDescription>
-      A compact info card without the accent strip.
-    </HoverCardDescription>
-  </HoverCardContent>
-</HoverCard>
-
-// 3. Fully custom content
-<HoverCard openDelay={200} closeDelay={100}>
-  <HoverCardTrigger asChild>
-    <span className="cursor-pointer underline decoration-dotted">learn more</span>
-  </HoverCardTrigger>
-  <HoverCardContent side="top" align="start">
-    <div className="flex items-start gap-3">
-      <div className="mt-0.5 text-lg">🎬</div>
-      <div>
-        <HoverCardTitle>Cinematic UI System</HoverCardTitle>
-        <HoverCardDescription>
-          A soft, immersive palette designed for long sessions without eye strain.
-          Available in both dark and light modes.
-        </HoverCardDescription>
-      </div>
-    </div>
-  </HoverCardContent>
-</HoverCard>
-*/

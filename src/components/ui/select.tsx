@@ -19,7 +19,13 @@ const SelectTrigger = React.forwardRef<
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background cursor-pointer data-placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+      "flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background cursor-pointer data-placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+      "transition-all duration-200 ease-out",
+      "hover:border-primary/50 hover:bg-accent/30 hover:-translate-y-px",
+      "focus:outline-none focus:ring-2 focus:ring-ring/40",
+      "data-[state=open]:border-primary/60 data-[state=open]:shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-ring)_18%,transparent)]",
+      "[&_svg]:transition-transform [&_svg]:duration-200",
+      "data-[state=open]:[&_svg]:rotate-180 data-[state=open]:[&_svg]:text-primary",
       className,
     )}
     {...props}
@@ -38,7 +44,11 @@ const SelectScrollUpButton = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.ScrollUpButton
     ref={ref}
-    className={cn("flex cursor-default items-center justify-center py-1", className)}
+    className={cn(
+      "flex cursor-default items-center justify-center py-1",
+      "text-muted-foreground transition-colors hover:text-primary",
+      className,
+    )}
     {...props}
   >
     <ChevronUp className="h-4 w-4" />
@@ -52,7 +62,11 @@ const SelectScrollDownButton = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.ScrollDownButton
     ref={ref}
-    className={cn("flex cursor-default items-center justify-center py-1", className)}
+    className={cn(
+      "flex cursor-default items-center justify-center py-1",
+      "text-muted-foreground transition-colors hover:text-primary",
+      className,
+    )}
     {...props}
   >
     <ChevronDown className="h-4 w-4" />
@@ -111,7 +125,14 @@ const SelectItem = React.forwardRef<
   <SelectPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50",
+      "relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-4 pr-8 text-sm outline-none",
+      "transition-all duration-200 ease-out",
+      "before:content-[''] before:absolute before:left-0.5 before:top-1/2 before:-translate-y-1/2",
+      "before:h-0 before:w-[2.5px] before:rounded-full before:bg-primary",
+      "before:transition-all before:duration-200 before:ease-out",
+      "hover:before:h-[55%]",
+      "focus:bg-accent focus:text-accent-foreground",
+      "data-disabled:pointer-events-none data-disabled:opacity-50",
       className,
     )}
     {...props}
