@@ -190,6 +190,7 @@ export type Database = {
           created_at: string;
           display_name: string | null;
           email: string | null;
+          full_name: string | null;
           id: string;
           role?: string;
         };
@@ -197,6 +198,7 @@ export type Database = {
           created_at?: string;
           display_name?: string | null;
           email?: string | null;
+          full_name?: string | null;
           id: string;
           role?: string;
         };
@@ -204,6 +206,7 @@ export type Database = {
           created_at?: string;
           display_name?: string | null;
           email?: string | null;
+          full_name?: string | null;
           id?: string;
           role?: string;
         };
