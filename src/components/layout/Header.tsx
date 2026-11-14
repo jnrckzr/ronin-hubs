@@ -1,10 +1,10 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Moon, Sun, LogOut, Fish, Watch, Coins, ChevronDown, Menu, X } from "lucide-react";
+import { Moon, Sun, LogOut, Fish, Watch, Coins, ChevronDown, Menu, X, UserRound } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAuth, useCurrency, useTheme } from "@/lib/providers";
 import { useRole } from "@/hooks/use-role";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/hooks/use-profile";
+import { ProfileDialog, getInitials } from "@/components/ProfileDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -210,6 +210,18 @@ const HEADER_STYLES = `
   .rh-dd-item[style] { color: #1C2230 !important; font-size: 13px !important; font-weight: 600 !important; }
   .dark .rh-dd-item[style] { color: #F4F1EA !important; }
 
+  .rh-profile-btn { position: relative; width: 34px; height: 34px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1.5px solid #D9DEE8; background: #F4F6FB; color: #6C7380; font-size: 12px; font-weight: 800; letter-spacing: .02em; font-family: 'DM Sans', system-ui, sans-serif; cursor: pointer; transition: transform .15s, box-shadow .2s, border-color .15s; }
+  .dark .rh-profile-btn { background: #252C3D; border-color: #2C3445; color: #A2AAB8; }
+  .rh-profile-btn:hover { transform: scale(1.06); border-color: #6E8EF7; }
+  .rh-profile-btn.has-name { color: #fff; border-color: transparent; background: linear-gradient(135deg, #6E8EF7, #8878FF); box-shadow: 0 3px 12px rgba(110,142,247,.30); }
+  .dark .rh-profile-btn.has-name { background: linear-gradient(135deg, #7DA2FF, #9A84FF); box-shadow: 0 3px 12px rgba(125,162,255,.30); }
+  .rh-profile-btn.has-name:hover { box-shadow: 0 4px 16px rgba(110,142,247,.45); }
+  .rh-profile-btn.missing::after { content: ''; position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: #C9995D; border: 2px solid #F7F4EE; }
+  .dark .rh-profile-btn.missing::after { background: #D6A86A; border-color: #0F1117; }
+  .rh-sheet-footer .rh-profile-btn.missing::after { border-color: #F4F6FB; }
+  .dark .rh-sheet-footer .rh-profile-btn.missing::after { border-color: #252C3D; }
+  .rh-profile-btn:focus-visible { outline: 2px solid #6E8EF7; outline-offset: 2px; }
+
   .rh-controls { display: flex; align-items: center; gap: 4px; margin-left: auto; }
   .rh-icon-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: none; border: none; border-radius: var(--r-sm); color: var(--text-secondary); cursor: pointer; font-family: inherit; transition: background .15s, color .15s, transform .15s; }
   .rh-icon-btn:hover { background: var(--bg-elevated); color: var(--text-primary); transform: scale(1.05); }
@@ -407,22 +419,14 @@ export function Header() {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
-  const { data: profile } = useQuery({
-    queryKey: ["profile", user?.id],
-    enabled: !!user,
-    staleTime: 5 * 60 * 1000,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("display_name")
-        .eq("id", user!.id)
-        .maybeSingle();
-      return data;
-    },
-  });
+  const { data: profile, isLoading: profileLoading } = useProfile();
 
   const n = profile?.display_name ?? "Ronin";
+  const initials = getInitials(profile?.full_name);
+  const nameMissing = !profileLoading && !profile?.full_name?.trim();
+  const profileTitle = nameMissing ? "Add your full name for contracts" : "Lender profile";
 
   const SALES_ITEMS: NavItem[] = [
     { to: "/sales/aquatic",    label: `${n}'s Aquatic`,    desc: "Fish sales tracker",  icon: <Fish className="h-4 w-4" /> },
@@ -498,6 +502,17 @@ export function Header() {
                 <DropdownMenuItem onClick={() => setCurrency("USD")} className="rh-dd-item" style={{ flexDirection: "row", alignItems: "center" }}>$ US Dollar</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {user && (
+              <button
+                className={`rh-profile-btn${initials ? " has-name" : ""}${nameMissing ? " missing" : ""}`}
+                onClick={() => setProfileOpen(true)}
+                aria-label={profileTitle}
+                title={profileTitle}
+              >
+                {initials || <UserRound size={15} />}
+              </button>
+            )}
 
             <button className="rh-icon-btn" onClick={toggle} aria-label="Toggle theme">
               {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
@@ -584,6 +599,16 @@ export function Header() {
           </DropdownMenu>
 
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {user && (
+              <button
+                className={`rh-profile-btn${initials ? " has-name" : ""}${nameMissing ? " missing" : ""}`}
+                onClick={() => { closeMobile(); setProfileOpen(true); }}
+                aria-label={profileTitle}
+                title={profileTitle}
+              >
+                {initials || <UserRound size={15} />}
+              </button>
+            )}
             <button className="rh-sheet-icon-btn" onClick={toggle} aria-label="Toggle theme">
               {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
             </button>
@@ -598,6 +623,8 @@ export function Header() {
           </div>
         </div>
       </div>
+
+      <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
     </>
   );
 }
