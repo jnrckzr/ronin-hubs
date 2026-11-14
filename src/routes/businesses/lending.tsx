@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useCurrency } from "@/lib/providers";
 import { toast } from "sonner";
 import { addDays, differenceInCalendarDays, format as fmtDate, parseISO } from "date-fns";
+import { downloadLoanContract } from "@/lib/loan-contract";
 
 export const Route = createFileRoute("/businesses/lending")({
   head: () => ({ meta: [{ title: "Lending — Ronin's Hub" }] }),
@@ -465,6 +466,53 @@ function Page() {
     qc.invalidateQueries({ queryKey: ["lending"] });
   };
 
+  /* ── Contract PDF (saved loan) ── */
+  const downloadContractForLoan = async (r: LoanRow): Promise<void> => {
+    try {
+      await downloadLoanContract({
+        loanId:        r.id,
+        lenderName:    displayName,
+        borrowerName:  r.borrower_name,
+        guarantorName: r.guarantor_name,
+        capital:       Number(r.capital),
+        rate:          Number(r.base_interest_rate ?? r.interest_rate),
+        termDays:      Number(r.term_days),
+        dateBorrowed:  r.date_borrowed,
+        dueDate:       r.due_date ?? fmtDate(addDays(parseISO(r.date_borrowed), Number(r.term_days)), "yyyy-MM-dd"),
+        notes:         r.notes,
+        rateSchedule:  TIERS,
+        getRate:       getRateForDays,
+      });
+    } catch {
+      toast.error("Could not create the contract PDF");
+    }
+  };
+
+  /* ── Contract PDF (straight from the form, before recording) ── */
+  const downloadContractFromForm = async (): Promise<void> => {
+    if (!borrower.trim() || capitalNum <= 0) {
+      toast.error("Fill borrower & capital first");
+      return;
+    }
+    try {
+      await downloadLoanContract({
+        lenderName:    displayName,
+        borrowerName:  borrower.trim(),
+        guarantorName: hasGuarantor ? guarantor.trim() : null,
+        capital:       capitalNum,
+        rate,
+        termDays:      days,
+        dateBorrowed:  dateBorrowed,
+        dueDate,
+        notes:         notes.trim() || null,
+        rateSchedule:  TIERS,
+        getRate:       getRateForDays,
+      });
+    } catch {
+      toast.error("Could not create the contract PDF");
+    }
+  };
+
   /* ── Record installment ── */
   const recordInstallment = async (): Promise<void> => {
     const amt = Number(modalAmt);
@@ -879,6 +927,11 @@ function Page() {
         .ld-root .expand-btn.expanded{transform:rotate(180deg);background:var(--c-accent-lt);color:var(--c-accent);border-color:var(--c-accent);}
         .ld-root .remove-btn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:none;border:none;border-radius:var(--r-sm);color:var(--c-text3);cursor:pointer;transition:background .15s,color .15s,transform .12s;}
         .ld-root .remove-btn:hover{background:rgba(199,107,107,.12);color:var(--c-danger);transform:scale(1.1);}
+        .ld-root .contract-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:44px;padding:0 18px;margin-top:16px;width:100%;background:var(--c-elevated);border:1.5px solid var(--c-border-md);border-radius:var(--r-sm);color:var(--c-text2);font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s,border-color .15s,color .15s,transform .12s;}
+        @media(min-width:480px){.ld-root .contract-btn{width:auto;margin-left:10px;}}
+        .ld-root .contract-btn:hover{background:var(--c-accent-lt);border-color:var(--c-accent);color:var(--c-accent);transform:translateY(-1px);}
+        .ld-root .contract-icon-btn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--c-border);border-radius:var(--r-sm);color:var(--c-text3);cursor:pointer;transition:background .15s,color .15s,border-color .15s,transform .12s;}
+        .ld-root .contract-icon-btn:hover{background:var(--c-accent-lt);color:var(--c-accent);border-color:var(--c-accent);transform:translateY(-1px);}
         .ld-root .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:64px 24px;color:var(--c-text3);text-align:center;}
         .ld-root .empty-state svg{opacity:.35;}
         .ld-root .empty-state p{margin:0;font-size:15px;}
@@ -1308,6 +1361,12 @@ function Page() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" width="14" height="14"><path d="M12 5v14M5 12h14"/></svg>
             Record loan
           </button>
+          <button className="contract-btn" type="button" onClick={downloadContractFromForm}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="15" height="15">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/>
+            </svg>
+            Download contract (PDF)
+          </button>
         </div>
 
         <div>
@@ -1347,7 +1406,7 @@ function Page() {
                 <th>Days</th><th>Borrowed</th><th>Due</th><th>Total Due</th>
                 <th>Paid (Inst.)</th><th>Remaining</th>
                 <th>Guar. Cut</th><th>Net Int.</th><th>Status</th>
-                <th style={{ width: 130 }} />
+                <th style={{ width: 170 }} />
               </tr>
             </thead>
             <tbody>
@@ -1437,6 +1496,16 @@ function Page() {
                             </svg>
                           </button>
                         )}
+                        <button
+                          className="contract-icon-btn"
+                          onClick={() => downloadContractForLoan(r)}
+                          title="Download contract (PDF)"
+                          aria-label="Download contract"
+                        >
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="14" height="14">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/>
+                          </svg>
+                        </button>
                         <button className="remove-btn" onClick={() => remove(r.id)} aria-label="Remove">
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="14" height="14">
                             <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
