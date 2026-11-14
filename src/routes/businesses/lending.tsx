@@ -5,6 +5,8 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useCurrency } from "@/lib/providers";
+import { useProfile } from "@/hooks/use-profile";
+import { ProfileDialog } from "@/components/ProfileDialog";
 import { toast } from "sonner";
 import { addDays, differenceInCalendarDays, format as fmtDate, parseISO } from "date-fns";
 import { downloadLoanContract } from "@/lib/loan-contract";
@@ -152,21 +154,10 @@ function Page() {
     },
   });
 
-  const { data: profile } = useQuery({
-    queryKey: ["profile", user?.id],
-    enabled: !!user,
-    staleTime: 5 * 60 * 1000,
-    queryFn: async () => {
-      const { data } = await (supabase as any)
-        .from("profiles")
-        .select("display_name")
-        .eq("id", user!.id)
-        .maybeSingle();
-      return data as { display_name: string } | null;
-    },
-  });
-
-  const displayName = profile?.display_name ?? "Ronin";
+  /* ── Profile (display name for header text, full name for contracts) ── */
+  const { data: profile, isLoading: profileLoading } = useProfile();
+  const displayName    = profile?.display_name ?? "Ronin";
+  const lenderFullName = profile?.full_name?.trim() ?? "";
 
   /* ── Wallet ── */
   const { data: wallet } = useQuery({
@@ -238,6 +229,7 @@ function Page() {
   const [dateBorrowed, setDateBorrowed] = useState(new Date().toISOString().slice(0, 10));
   const [notes,        setNotes]        = useState("");
   const [calcOpen,     setCalcOpen]     = useState(false);
+  const [profileOpen,  setProfileOpen]  = useState(false);
 
   /* ── Modal state ── */
   type ModalType =
@@ -468,10 +460,14 @@ function Page() {
 
   /* ── Contract PDF (saved loan) ── */
   const downloadContractForLoan = async (r: LoanRow): Promise<void> => {
+    if (!lenderFullName) {
+      toast.error("Set your full name first (profile icon in the header)");
+      return;
+    }
     try {
       await downloadLoanContract({
         loanId:        r.id,
-        lenderName:    displayName,
+        lenderName:    lenderFullName,
         borrowerName:  r.borrower_name,
         guarantorName: r.guarantor_name,
         capital:       Number(r.capital),
@@ -490,13 +486,17 @@ function Page() {
 
   /* ── Contract PDF (straight from the form, before recording) ── */
   const downloadContractFromForm = async (): Promise<void> => {
+    if (!lenderFullName) {
+      toast.error("Set your full name first (profile icon in the header)");
+      return;
+    }
     if (!borrower.trim() || capitalNum <= 0) {
       toast.error("Fill borrower & capital first");
       return;
     }
     try {
       await downloadLoanContract({
-        lenderName:    displayName,
+        lenderName:    lenderFullName,
         borrowerName:  borrower.trim(),
         guarantorName: hasGuarantor ? guarantor.trim() : null,
         capital:       capitalNum,
@@ -932,6 +932,10 @@ function Page() {
         .ld-root .contract-btn:hover{background:var(--c-accent-lt);border-color:var(--c-accent);color:var(--c-accent);transform:translateY(-1px);}
         .ld-root .contract-icon-btn{width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:none;border:1px solid var(--c-border);border-radius:var(--r-sm);color:var(--c-text3);cursor:pointer;transition:background .15s,color .15s,border-color .15s,transform .12s;}
         .ld-root .contract-icon-btn:hover{background:var(--c-accent-lt);color:var(--c-accent);border-color:var(--c-accent);transform:translateY(-1px);}
+        .ld-root .lender-note{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:14px;padding:12px 14px;border-radius:var(--r-sm);background:rgba(201,153,93,.09);border:1px solid rgba(201,153,93,.28);border-left:3px solid var(--c-warn);font-size:13px;line-height:1.5;color:var(--c-text2);}
+        .ld-root .lender-note strong{color:var(--c-text);font-weight:700;}
+        .ld-root .lender-note-btn{height:32px;padding:0 14px;background:var(--c-warn);border:none;border-radius:var(--r-sm);color:#fff;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;transition:background .15s,transform .12s;}
+        .ld-root .lender-note-btn:hover{background:#b8843a;transform:translateY(-1px);}
         .ld-root .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:64px 24px;color:var(--c-text3);text-align:center;}
         .ld-root .empty-state svg{opacity:.35;}
         .ld-root .empty-state p{margin:0;font-size:15px;}
@@ -972,6 +976,8 @@ function Page() {
 
         @media(max-width:359px){.ld-root .page-title{font-size:1.35rem;}.ld-root .panel{padding:14px;}}
       `}</style>
+
+      <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
 
       {/* ── Modal ─────────────────────────────────────────── */}
       {modal && (
@@ -1367,6 +1373,12 @@ function Page() {
             </svg>
             Download contract (PDF)
           </button>
+          {!profileLoading && !lenderFullName && (
+            <div className="lender-note">
+              <span><strong>Add your full name</strong> so contracts show who the lender is.</span>
+              <button type="button" className="lender-note-btn" onClick={() => setProfileOpen(true)}>Add my name</button>
+            </div>
+          )}
         </div>
 
         <div>
