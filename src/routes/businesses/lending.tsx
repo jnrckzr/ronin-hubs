@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useCurrency } from "@/lib/providers";
 import { toast } from "sonner";
-import { addDays, format as fmtDate } from "date-fns";
+import { addDays, differenceInCalendarDays, format as fmtDate, parseISO } from "date-fns";
 
 export const Route = createFileRoute("/businesses/lending")({
   head: () => ({ meta: [{ title: "Lending — Ronin's Hub" }] }),
@@ -87,6 +87,8 @@ interface LoanRow {
   status: string;
   guarantor_cut: number | null;
   net_interest: number | null;
+  late_days: number | null;
+  base_interest_rate: number | null;
 }
 
 interface InstallmentPayment {
@@ -95,6 +97,40 @@ interface InstallmentPayment {
   amount: number;
   notes: string | null;
   paid_at: string;
+}
+
+/* ─── Late-interest aware loan figures ─────────────────────────────────────
+   Active loans: rate is recalculated live. If the loan has run longer than
+   its agreed term, the rate follows the same tier curve (e.g. 40d term paid
+   on day 45 => rate of 45 days = 22.5%).
+   Paid loans: use the rate that was locked in when the loan was settled.
+────────────────────────────────────────────────────────────────────────── */
+function getLoanFigures(r: LoanRow, asOf: Date = new Date()) {
+  const capital    = Number(r.capital);
+  const storedRate = Number(r.interest_rate);
+  const isPaid     = r.status === "paid";
+
+  const elapsed  = Math.max(0, differenceInCalendarDays(asOf, parseISO(r.date_borrowed)));
+  const lateDays = isPaid ? Number(r.late_days ?? 0) : Math.max(0, elapsed - Number(r.term_days));
+
+  const rate = isPaid
+    ? storedRate
+    : Math.max(
+        storedRate,
+        Math.round(getRateForDays(Math.max(Number(r.term_days), elapsed)) * 10000) / 10000
+      );
+
+  const rawInterest  = capital * rate;
+  const guarantorCut = r.guarantor_name ? getGuarantorCut(rawInterest) : 0;
+
+  return {
+    rate,
+    lateDays,
+    rawInterest,
+    guarantorCut,
+    netInterest: rawInterest - guarantorCut,
+    total: capital + rawInterest,
+  };
 }
 
 /* ─── Page ───────────────────────────────────────────────────────────────── */
@@ -154,6 +190,18 @@ function Page() {
     },
   });
 
+  /* ── Investment fund withdrawals ── */
+  const { data: investWithdrawals = [] } = useQuery({
+    queryKey: ["investment-withdrawals", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("investment_withdrawals").select("*").eq("user_id", user!.id)
+        .order("withdrawn_at", { ascending: false });
+      return (data ?? []) as any[];
+    },
+  });
+
   /* ── Guarantor payout records ── */
   const { data: guarantorPayouts = [] } = useQuery({
     queryKey: ["guarantor-payouts", user?.id],
@@ -191,7 +239,14 @@ function Page() {
   const [calcOpen,     setCalcOpen]     = useState(false);
 
   /* ── Modal state ── */
-  type ModalType = "add-invest" | "move-savings" | "withdraw-savings" | "pay-guarantor" | "installment" | null;
+  type ModalType =
+    | "add-invest"
+    | "withdraw-invest"
+    | "move-savings"
+    | "withdraw-savings"
+    | "pay-guarantor"
+    | "installment"
+    | null;
   const [modal,          setModal]          = useState<ModalType>(null);
   const [modalAmt,       setModalAmt]       = useState("");
   const [modalNote,      setModalNote]      = useState("");
@@ -199,8 +254,9 @@ function Page() {
   const [modalLoan,      setModalLoan]      = useState<LoanRow | null>(null);
 
   /* ── Panel toggles ── */
-  const [showWithdrawHistory, setShowWithdrawHistory] = useState(false);
-  const [showGuarantorPanel,  setShowGuarantorPanel]  = useState(false);
+  const [showWithdrawHistory,       setShowWithdrawHistory]       = useState(false);
+  const [showInvestWithdrawHistory, setShowInvestWithdrawHistory] = useState(false);
+  const [showGuarantorPanel,        setShowGuarantorPanel]        = useState(false);
   const [expandedLoans, setExpandedLoans] = useState<Set<string>>(new Set());
 
   /* ── Derived calculations ── */
@@ -216,19 +272,24 @@ function Page() {
   const guarantorCut  = hasGuarantor ? getGuarantorCut(interest) : 0;
   const netInterest   = interest - guarantorCut;
 
-  /* ── Totals ── */
+  /* ── Totals (late-interest aware) ── */
   const totals = useMemo(() => {
-    const active = rows.filter((x) => x.status === "active");
-    const totalCapital       = active.reduce((s, x) => s + Number(x.capital), 0);
-    const totalInterest      = active.reduce((s, x) => s + Number(x.capital) * Number(x.interest_rate), 0);
-    const totalGuarantorCuts = active
-      .filter((x) => x.guarantor_name)
-      .reduce((s, x) => s + getGuarantorCut(Number(x.capital) * Number(x.interest_rate)), 0);
+    let totalCapital = 0;
+    let totalInterest = 0;
+    let totalGuarantorCuts = 0;
+    let net = 0;
+    for (const x of rows.filter((x) => x.status === "active")) {
+      const f = getLoanFigures(x);
+      totalCapital       += Number(x.capital);
+      totalInterest      += f.rawInterest;
+      totalGuarantorCuts += f.guarantorCut;
+      net                += f.netInterest;
+    }
     return {
       totalCapital,
       totalInterest,
       totalGuarantorCuts,
-      netInterest: totalInterest - totalGuarantorCuts,
+      netInterest: net,
       total: totalCapital + totalInterest,
     };
   }, [rows]);
@@ -260,6 +321,10 @@ function Page() {
   const totalWithdrawn = useMemo(
     () => (withdrawals as any[]).reduce((s, w) => s + Number(w.amount), 0),
     [withdrawals]
+  );
+  const totalInvestWithdrawn = useMemo(
+    () => (investWithdrawals as any[]).reduce((s, w) => s + Number(w.amount), 0),
+    [investWithdrawals]
   );
 
   /* ── Per-loan installment totals ── */
@@ -305,18 +370,20 @@ function Page() {
     const finalNetInterest  = finalInterest - finalGuarantorCut;
 
     const { error } = await (supabase as any).from("lending_records").insert({
-      user_id:        user.id,
-      borrower_name:  borrower,
-      guarantor_name: guarantor || null,
-      capital:        capitalNum,
-      interest_rate:  finalRate,
-      term_days:      days,
-      date_borrowed:  dateBorrowed,
-      due_date:       dueDate,
-      notes:          notes || null,
-      status:         "active",
-      guarantor_cut:  finalGuarantorCut,
-      net_interest:   finalNetInterest,
+      user_id:            user.id,
+      borrower_name:      borrower,
+      guarantor_name:     guarantor || null,
+      capital:            capitalNum,
+      interest_rate:      finalRate,
+      base_interest_rate: finalRate,
+      term_days:          days,
+      date_borrowed:      dateBorrowed,
+      due_date:           dueDate,
+      notes:              notes || null,
+      status:             "active",
+      guarantor_cut:      finalGuarantorCut,
+      net_interest:       finalNetInterest,
+      late_days:          0,
     });
 
     if (error) {
@@ -337,18 +404,32 @@ function Page() {
     invalidateLending();
   };
 
-  /* ── Mark paid ── */
+  /* ── Mark paid (locks in late interest) ── */
   const markPaid = async (r: LoanRow): Promise<void> => {
-    await (supabase as any).from("lending_records")
-      .update({ status: "paid", received_date: new Date().toISOString().slice(0, 10) })
+    if (!user) return;
+    const f = getLoanFigures(r);
+
+    const { error } = await (supabase as any).from("lending_records")
+      .update({
+        status:             "paid",
+        received_date:      fmtDate(new Date(), "yyyy-MM-dd"),
+        interest_rate:      f.rate,
+        base_interest_rate: r.base_interest_rate ?? r.interest_rate,
+        late_days:          f.lateDays,
+        guarantor_cut:      f.guarantorCut,
+        net_interest:       f.netInterest,
+      })
       .eq("id", r.id);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
 
     await ensureWallet();
 
-    const capital         = Number(r.capital);
-    const rawInt          = capital * Number(r.interest_rate);
-    const guarantorDeduct = r.guarantor_name ? getGuarantorCut(rawInt) : 0;
-    const earnedInterest  = Number(r.net_interest ?? (rawInt - guarantorDeduct));
+    const loanCapital    = Number(r.capital);
+    const earnedInterest = f.netInterest;
 
     // Sum up all installment payments already recorded for this loan
     const totalInstPaid = (installmentsByLoan[r.id] ?? []).reduce(
@@ -356,23 +437,25 @@ function Page() {
     );
 
     // Installments fill interest first, then capital
-    // So figure out how much of each has already been covered
     const interestCoveredByInst = Math.min(totalInstPaid, earnedInterest);
     const capitalCoveredByInst  = Math.max(0, totalInstPaid - interestCoveredByInst);
 
-    // Only add back the capital that hasn't already been returned via installments
-    const capitalStillOwed   = Math.max(0, capital - capitalCoveredByInst);
-    // Only add interest that hasn't already been saved via installments
-    const interestStillOwed  = Math.max(0, earnedInterest - interestCoveredByInst);
+    // Only add back what hasn't already been returned via installments
+    const capitalStillOwed  = Math.max(0, loanCapital - capitalCoveredByInst);
+    const interestStillOwed = Math.max(0, earnedInterest - interestCoveredByInst);
 
     const newFund    = investmentFund + capitalStillOwed;
     const newSavings = interestSavings + interestStillOwed;
 
     await (supabase as any).from("lending_wallet")
       .update({ investment_fund: newFund, interest_savings: newSavings })
-      .eq("user_id", user!.id);
+      .eq("user_id", user.id);
 
-    toast.success(`Marked paid — ₱${earnedInterest.toFixed(2)} interest saved`);
+    toast.success(
+      f.lateDays > 0
+        ? `Marked paid — ${f.lateDays}d late, ₱${earnedInterest.toFixed(2)} interest saved`
+        : `Marked paid — ₱${earnedInterest.toFixed(2)} interest saved`
+    );
     invalidateLending();
   };
 
@@ -390,7 +473,8 @@ function Page() {
       return;
     }
 
-    const loanTotalDue = Number(modalLoan.capital) * (1 + Number(modalLoan.interest_rate));
+    const f            = getLoanFigures(modalLoan);
+    const loanTotalDue = f.total;
     const alreadyPaid  = (installmentsByLoan[modalLoan.id] ?? []).reduce((s, i) => s + Number(i.amount), 0);
     const remaining    = loanTotalDue - alreadyPaid;
 
@@ -414,9 +498,7 @@ function Page() {
       return;
     }
 
-    const rawInt          = Number(modalLoan.capital) * Number(modalLoan.interest_rate);
-    const guarantorPct    = modalLoan.guarantor_name ? 0.20 : 0;
-    const netInt          = rawInt * (1 - guarantorPct);
+    const netInt = f.netInterest;
 
     // How much of the net interest has already been covered by prior installments?
     const interestAlreadyCovered = Math.min(alreadyPaid, netInt);
@@ -434,9 +516,15 @@ function Page() {
       .eq("user_id", user.id);
 
     if (alreadyPaid + amt >= loanTotalDue - 0.01) {
-      await (supabase as any).from("lending_records")
-        .update({ status: "paid", received_date: new Date().toISOString().slice(0, 10) })
-        .eq("id", modalLoan.id);
+      await (supabase as any).from("lending_records").update({
+        status:             "paid",
+        received_date:      fmtDate(new Date(), "yyyy-MM-dd"),
+        interest_rate:      f.rate,
+        base_interest_rate: modalLoan.base_interest_rate ?? modalLoan.interest_rate,
+        late_days:          f.lateDays,
+        guarantor_cut:      f.guarantorCut,
+        net_interest:       f.netInterest,
+      }).eq("id", modalLoan.id);
       toast.success("Loan fully paid via installments! 🎉");
     } else {
       toast.success(`Installment of ${format(amt)} recorded`);
@@ -467,6 +555,27 @@ function Page() {
         .update({ investment_fund: investmentFund + amt })
         .eq("user_id", user!.id);
       toast.success(`Added ₱${amt.toLocaleString()} to investment fund`);
+
+    } else if (modal === "withdraw-invest") {
+      if (amt > investmentFund + 0.005) {
+        toast.error(`Not enough in investment fund (${format(investmentFund)})`);
+        return;
+      }
+      const { error } = await (supabase as any).from("investment_withdrawals").insert({
+        user_id:      user!.id,
+        amount:       amt,
+        notes:        modalNote || null,
+        withdrawn_at: fmtDate(new Date(), "yyyy-MM-dd"),
+      });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      await (supabase as any).from("lending_wallet")
+        .update({ investment_fund: investmentFund - amt })
+        .eq("user_id", user!.id);
+      toast.success(`Withdrew ₱${amt.toLocaleString()} from investment fund`);
+      qc.invalidateQueries({ queryKey: ["investment-withdrawals"] });
 
     } else if (modal === "move-savings") {
       if (amt > interestSavings) {
@@ -531,7 +640,8 @@ function Page() {
   /* ── Installment Modal Content ── */
   const InstallmentModalContent = (): React.ReactElement | null => {
     if (!modalLoan) return null;
-    const loanTotal   = Number(modalLoan.capital) * (1 + Number(modalLoan.interest_rate));
+    const fig         = getLoanFigures(modalLoan);
+    const loanTotal   = fig.total;
     const alreadyPaid = (installmentsByLoan[modalLoan.id] ?? []).reduce((s, i) => s + Number(i.amount), 0);
     const remaining   = Math.max(0, loanTotal - alreadyPaid);
     const progressPct = Math.min(100, (alreadyPaid / loanTotal) * 100);
@@ -573,6 +683,11 @@ function Page() {
             placeholder="e.g. weekly, cash, partial…"
           />
         </div>
+        {fig.lateDays > 0 && (
+          <div style={{ fontSize: 11, color: "var(--c-danger)", marginTop: 10, fontWeight: 600 }}>
+            ⚠ {fig.lateDays} days past due — rate is now {(fig.rate * 100).toFixed(2)}%
+          </div>
+        )}
         <div style={{ fontSize: 11, color: "var(--c-text3)", marginTop: 10, padding: "8px 10px", background: "var(--c-elevated)", borderRadius: "var(--r-sm)", lineHeight: 1.6 }}>
           💡 Interest portion goes to <strong style={{ color: "var(--c-accent2)" }}>Interest Savings</strong> first, excess capital to <strong style={{ color: "var(--c-accent)" }}>Investment Fund</strong>.
         </div>
@@ -752,6 +867,7 @@ function Page() {
         .ld-root .badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;letter-spacing:.05em;padding:3px 9px;border-radius:99px;}
         .ld-root .badge-active{background:rgba(110,142,247,.12);color:#6E8EF7;}
         .ld-root .badge-paid{background:rgba(110,159,122,.12);color:#6E9F7A;}
+        .ld-root .badge-late{background:rgba(199,107,107,.12);color:var(--c-danger);margin-left:6px;}
         .ld-root .guarantor-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:6px;background:rgba(201,153,93,.10);color:var(--c-warn);border:1px solid rgba(201,153,93,.22);}
         .ld-root .action-row{display:flex;align-items:center;gap:6px;}
         .ld-root .paid-btn{height:30px;padding:0 10px;background:var(--c-elevated);border:1.5px solid var(--c-border);border-radius:var(--r-sm);color:var(--c-text2);font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,color .15s,transform .12s;}
@@ -824,6 +940,25 @@ function Page() {
               </>
             )}
 
+            {modal === "withdraw-invest" && (
+              <>
+                <p className="modal-title">💸 Withdraw from Investment Fund</p>
+                <p className="modal-sub">Available: <strong style={{ color: "var(--c-ok)" }}>{format(investmentFund)}</strong></p>
+                <div className="modal-field">
+                  <label className="field-label">Amount (₱)</label>
+                  <input type="number" className="form-input" value={modalAmt} onChange={(e) => setModalAmt(e.target.value)} placeholder="0" autoFocus />
+                </div>
+                <div className="modal-field">
+                  <label className="field-label">Notes (optional)</label>
+                  <input type="text" className="form-input" value={modalNote} onChange={(e) => setModalNote(e.target.value)} placeholder="e.g. emergency, personal, other business…" />
+                </div>
+                <div className="modal-footer">
+                  <button className="cancel-btn" onClick={() => setModal(null)}>Cancel</button>
+                  <button className="confirm-btn danger-confirm" onClick={handleModalAction}>Withdraw</button>
+                </div>
+              </>
+            )}
+
             {modal === "move-savings" && (
               <>
                 <p className="modal-title">Move Savings → Investment Fund</p>
@@ -886,7 +1021,7 @@ function Page() {
       {/* ── Header ─────────────────────────────────────────── */}
       <header className="page-header ld-fade-up" style={{ animationDelay: "0ms" }}>
         <h1 className="page-title">{displayName}'s <span>Lending Money</span></h1>
-        <p className="page-sub">5–6 lending ledger · Interest scales continuously past 40 days · Installments auto-split to savings & fund</p>
+        <p className="page-sub">5–6 lending ledger · Interest scales automatically past the due date · Installments auto-split to savings & fund</p>
       </header>
 
       {/* ── Wallet Strip ───────────────────────────────────── */}
@@ -899,7 +1034,16 @@ function Page() {
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" width="12" height="12"><path d="M12 5v14M5 12h14"/></svg>
               Add Funds
             </button>
+            <button className="wallet-btn danger-btn" onClick={() => { setModal("withdraw-invest"); setModalAmt(""); setModalNote(""); }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="11" height="11"><path d="M12 2v13M5 9l7 7 7-7"/><path d="M3 21h18"/></svg>
+              Withdraw
+            </button>
           </div>
+          {(investWithdrawals as any[]).length > 0 && (
+            <div style={{ marginTop: 6, fontSize: 11, color: "var(--c-text3)" }}>
+              Withdrawn: <span style={{ color: "var(--c-danger)", fontWeight: 700 }}>{format(totalInvestWithdrawn)}</span>
+            </div>
+          )}
         </div>
 
         <div className="wallet-card warn">
@@ -955,6 +1099,40 @@ function Page() {
           <span className="stat-value">{format(totals.netInterest)}</span>
         </div>
       </div>
+
+      {/* ── Investment Fund Withdrawal History ─────── */}
+      {(investWithdrawals as any[]).length > 0 && (
+        <div className="section-panel ld-fade-up" style={{ animationDelay: "70ms" }}>
+          <div className={`section-header${showInvestWithdrawHistory ? " open" : ""}`}
+            onClick={() => setShowInvestWithdrawHistory((v) => !v)}>
+            <div className="section-header-left">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--c-danger)" strokeWidth="1.8" width="16" height="16">
+                <path d="M12 2v13M5 9l7 7 7-7"/><path d="M3 21h18" strokeLinecap="round"/>
+              </svg>
+              <span className="section-title">Investment Fund Withdrawals</span>
+              <span className="section-badge danger">{format(totalInvestWithdrawn)} total</span>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14"
+              style={{ transform: showInvestWithdrawHistory ? "rotate(180deg)" : "none", transition: "transform .2s", color: "var(--c-text3)" }}>
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
+          </div>
+          {showInvestWithdrawHistory && (
+            <div className="section-body">
+              <p className="section-sub-title">Withdrawal History</p>
+              {(investWithdrawals as any[]).map((w) => (
+                <div key={w.id} className="withdraw-row">
+                  <div>
+                    <div className="withdraw-row-amt">− {format(Number(w.amount))}</div>
+                    {w.notes && <div className="withdraw-row-note">{w.notes}</div>}
+                  </div>
+                  <div className="withdraw-row-date">{w.withdrawn_at}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Savings Withdrawal History ─────── */}
       {(withdrawals as any[]).length > 0 && (
@@ -1174,10 +1352,10 @@ function Page() {
             </thead>
             <tbody>
               {rows.map((r, idx): React.ReactNode[] => {
-                const tot         = Number(r.capital) * (1 + Number(r.interest_rate));
-                const rawInt      = Number(r.capital) * Number(r.interest_rate);
-                const gCut        = r.guarantor_name ? getGuarantorCut(rawInt) : 0;
-                const netInt      = rawInt - gCut;
+                const f           = getLoanFigures(r);
+                const tot         = f.total;
+                const gCut        = f.guarantorCut;
+                const netInt      = f.netInterest;
                 const loanInsts   = installmentsByLoan[r.id] ?? [];
                 const instPaid    = loanInsts.reduce((s, i) => s + Number(i.amount), 0);
                 const remaining   = Math.max(0, tot - instPaid);
@@ -1194,10 +1372,17 @@ function Page() {
                         : <span style={{ color: "var(--c-text3)" }}>—</span>}
                     </td>
                     <td>{format(Number(r.capital))}</td>
-                    <td>{(Number(r.interest_rate) * 100).toFixed(2)}%</td>
+                    <td>
+                      {(f.rate * 100).toFixed(2)}%
+                      {f.lateDays > 0 && (
+                        <span className="badge badge-late">+{f.lateDays}d late</span>
+                      )}
+                    </td>
                     <td>{r.term_days}</td>
                     <td style={{ color: "var(--c-text2)" }}>{r.date_borrowed}</td>
-                    <td style={{ color: "var(--c-text2)" }}>{r.due_date ?? "—"}</td>
+                    <td style={{ color: f.lateDays > 0 && r.status !== "paid" ? "var(--c-danger)" : "var(--c-text2)", fontWeight: f.lateDays > 0 && r.status !== "paid" ? 700 : 400 }}>
+                      {r.due_date ?? "—"}
+                    </td>
                     <td style={{ fontWeight: 700 }}>{format(tot)}</td>
                     <td>
                       {hasInsts ? (
@@ -1374,6 +1559,7 @@ function CalcPanel({
       <p className="calc-note">
         Renewal: pay only the interest of <strong>{format(interest)}</strong> every {days} days.
         {hasGuarantor && <> Your net after guarantor: <strong>{format(netInterest)}</strong>.</>}
+        {" "}Paying after the due date raises the rate automatically for every extra day.
       </p>
     </div>
   );
